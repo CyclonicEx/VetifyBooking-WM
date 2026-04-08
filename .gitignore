@@ -1,0 +1,68 @@
+# =========================
+# 🔐 Variables de entorno
+# =========================
+.env
+*.env
+
+# =========================
+# 🐍 Django / Python
+# =========================
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+*.log
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+
+# =========================
+# ⚙️ Archivos del sistema
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🧪 VS Code / IDEs
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# 📦 Node (si usas frontend)
+# =========================
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# =========================
+# 📱 Flutter
+# =========================
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.dart_tool/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/.last_build_id
+android/.gradle/
+android/app/build/
+
+# =========================
+# 🔑 Claves y secretos
+# =========================
+*.pem
+*.key
+
+# =========================
+# 📂 Otros
+# =========================
+coverage/
+dist/

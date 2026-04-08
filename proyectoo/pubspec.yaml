@@ -1,0 +1,48 @@
+name: proyectoo
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.6
+
+  # ── Ya tenías estas ──────────────────────────
+  provider: ^6.0.5
+  image_picker: ^1.0.4
+  sqflite: ^2.3.2
+  path: ^1.9.0
+  pedometer: ^4.1.0
+  cupertino_icons: ^1.0.8
+
+  # ── Nuevas (RF13 contacto, RF14 comprobante PDF) ──
+  url_launcher: ^6.2.5       # RF13 – llamar, WhatsApp, email
+  pdf: ^3.10.8               # RF14 – generar PDF del comprobante
+  path_provider: ^2.1.2      # RF14 – guardar PDF en el dispositivo
+  open_file: ^3.3.2  
+  share_plus: ^7.2.2
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_native_splash: ^2.4.0
+  font_awesome_flutter: ^10.7.0
+
+flutter_native_splash:
+  image: assets/portada.png
+  color: "#ffffff"
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo.png
+    - assets/vet.jpg
+    - assets/cd.png
