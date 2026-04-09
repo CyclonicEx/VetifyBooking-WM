@@ -417,7 +417,8 @@ from django.utils import timezone
 @login_required
 def medical_history_view(request):
     appointments = Appointment.objects.filter(
-        user=request.user
+        user=request.user,
+        status='completed'  # ← solo completadas
     ).select_related(
         'pet'
     ).prefetch_related(
@@ -425,8 +426,19 @@ def medical_history_view(request):
         'consultation__prescription__items'
     ).order_by('-date', '-time')
 
+    from booking.models import Hospitalization
+    hospitalizaciones = Hospitalization.objects.filter(
+        pet__owner=request.user
+    ).select_related(
+        'pet', 'veterinarian'
+    ).prefetch_related(
+        'monitoring_records',
+        'treatments'
+    ).order_by('-admission_date')
+
     context = {
         'appointments': appointments,
+        'hospitalizaciones': hospitalizaciones,
         'today': timezone.now().date(),
     }
     return render(request, 'booking/medical_history.html', context)

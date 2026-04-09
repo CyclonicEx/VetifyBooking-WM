@@ -15,6 +15,152 @@
         </div>
     </div>
 
+    <!-- Sección Hospitalizaciones -->
+    {% if hospitalizaciones %}
+    <div style="margin-bottom:2rem;">
+
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+            <i class="bi bi-hospital" style="font-size:1.25rem; color:#1565C0;"></i>
+            <h2 style="font-size:1.25rem; font-weight:700; color:#0f172a; margin:0;">Hospitalizaciones</h2>
+        </div>
+
+        {% for h in hospitalizaciones %}
+        <div style="background:white; border-radius:1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:1.25rem; overflow:hidden; border-left:4px solid {% if h.status == 'active' %}#ef4444{% elif h.status == 'discharged' %}#10b981{% else %}#6b7280{% endif %};">
+
+            <!-- Header -->
+            <div style="padding:1.25rem 1.5rem; border-bottom:1px solid #f3f4f6; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <div style="width:48px; height:48px; background:linear-gradient(135deg,#bfdbfe,#93c5fd); border-radius:0.75rem; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        {% if h.pet.photo %}
+                            <img src="{{ h.pet.photo.url }}" style="width:100%; height:100%; object-fit:cover;">
+                        {% else %}
+                            <i class="bi bi-heart-pulse" style="color:#1565C0; font-size:1.25rem;"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-weight:700; color:#0f172a; font-size:1.1rem;">{{ h.pet.name }}</div>
+                        <div style="font-size:0.8rem; color:#6b7280;">
+                            <i class="bi bi-calendar"></i> Ingreso: {{ h.admission_date|date:"d/m/Y H:i" }}
+                            {% if h.veterinarian %}
+                            &nbsp;·&nbsp; <i class="bi bi-person-badge"></i> Dr(a). {{ h.veterinarian.name }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <span style="padding:0.3rem 0.9rem; border-radius:9999px; font-size:0.75rem; font-weight:700;
+                        {% if h.status == 'active' %}background:#fee2e2; color:#991b1b;
+                        {% elif h.status == 'discharged' %}background:#d1fae5; color:#065f46;
+                        {% else %}background:#f3f4f6; color:#374151;{% endif %}">
+                        {{ h.get_status_display }}
+                    </span>
+                    <span style="padding:0.3rem 0.9rem; border-radius:9999px; font-size:0.75rem; font-weight:600;
+                        {% if h.patient_status == 'critical' %}background:#fee2e2; color:#991b1b;
+                        {% elif h.patient_status == 'serious' %}background:#ffedd5; color:#9a3412;
+                        {% elif h.patient_status == 'stable' %}background:#dbeafe; color:#1e40af;
+                        {% elif h.patient_status == 'improving' %}background:#e0f2fe; color:#0369a1;
+                        {% else %}background:#d1fae5; color:#065f46;{% endif %}">
+                        {{ h.get_patient_status_display }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Cuerpo -->
+            <div style="padding:1.25rem 1.5rem;">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1rem;">
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:600; color:#6b7280; margin-bottom:0.25rem;">MOTIVO</div>
+                        <div style="font-size:0.875rem; color:#374151;">{{ h.reason }}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.75rem; font-weight:600; color:#6b7280; margin-bottom:0.25rem;">DIAGNÓSTICO INICIAL</div>
+                        <div style="font-size:0.875rem; color:#374151;">{{ h.initial_diagnosis }}</div>
+                    </div>
+                </div>
+
+                <!-- Últimos signos vitales -->
+                {% with ultimo=h.monitoring_records.first %}
+                {% if ultimo %}
+                <div style="background:#f8fafc; border-radius:0.75rem; padding:1rem; margin-bottom:1rem;">
+                    <div style="font-size:0.75rem; font-weight:700; color:#6b7280; margin-bottom:0.75rem;">
+                        <i class="bi bi-activity"></i> ÚLTIMO REGISTRO — {{ ultimo.recorded_at|date:"d/m/Y H:i" }}
+                    </div>
+                    <div style="display:flex; gap:1.5rem; flex-wrap:wrap;">
+                        {% if ultimo.temperature %}
+                        <div style="text-align:center;">
+                            <div style="font-size:1rem; font-weight:700; color:#0f172a;">{{ ultimo.temperature }}°C</div>
+                            <div style="font-size:0.7rem; color:#6b7280;">Temperatura</div>
+                        </div>
+                        {% endif %}
+                        {% if ultimo.heart_rate %}
+                        <div style="text-align:center;">
+                            <div style="font-size:1rem; font-weight:700; color:#0f172a;">{{ ultimo.heart_rate }}</div>
+                            <div style="font-size:0.7rem; color:#6b7280;">FC (lpm)</div>
+                        </div>
+                        {% endif %}
+                        {% if ultimo.respiratory_rate %}
+                        <div style="text-align:center;">
+                            <div style="font-size:1rem; font-weight:700; color:#0f172a;">{{ ultimo.respiratory_rate }}</div>
+                            <div style="font-size:0.7rem; color:#6b7280;">FR (rpm)</div>
+                        </div>
+                        {% endif %}
+                        {% if ultimo.weight %}
+                        <div style="text-align:center;">
+                            <div style="font-size:1rem; font-weight:700; color:#0f172a;">{{ ultimo.weight }} kg</div>
+                            <div style="font-size:0.7rem; color:#6b7280;">Peso</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if ultimo.observations %}
+                    <div style="margin-top:0.75rem; font-size:0.8rem; color:#374151; font-style:italic;">
+                        "{{ ultimo.observations }}"
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                <!-- Tratamientos activos -->
+                {% with activos=h.treatments.all %}
+                {% if activos %}
+                <div style="font-size:0.75rem; font-weight:700; color:#6b7280; margin-bottom:0.5rem;">
+                    <i class="bi bi-capsule"></i> TRATAMIENTOS
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                    {% for t in activos %}
+                    <span style="padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.75rem; font-weight:600;
+                        {% if t.status == 'active' %}background:#d1fae5; color:#065f46;
+                        {% elif t.status == 'suspended' %}background:#fef9c3; color:#854d0e;
+                        {% else %}background:#f3f4f6; color:#374151;{% endif %}">
+                        {{ t.medication }} · {{ t.dose }}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
+                {% if h.discharge_date %}
+                <div style="margin-top:1rem; background:#d1fae5; border-radius:0.5rem; padding:0.6rem 0.875rem; font-size:0.8rem; color:#065f46; font-weight:600;">
+                    <i class="bi bi-check-circle"></i> Alta: {{ h.discharge_date|date:"d/m/Y H:i" }}
+                    {% if h.notes %} — {{ h.notes }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+    {% endif %}
+
+    <!-- Separador antes de citas -->
+    {% if appointments %}
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+        <i class="bi bi-calendar-check" style="font-size:1.25rem; color:#1565C0;"></i>
+        <h2 style="font-size:1.25rem; font-weight:700; color:#0f172a; margin:0;">Consultas Médicas</h2>
+    </div>
+    {% endif %}
+
     {% if appointments %}
         {% for apt in appointments %}
         <div style="background:white; border-radius:1.25rem; box-shadow:0 2px 8px rgba(0,0,0,0.08); margin-bottom:1.5rem; overflow:hidden;">
@@ -22,8 +168,8 @@
             <!-- Header de la cita -->
             <div style="background:{% if apt.date < today %}#f8fafc{% else %}#f0f9ff{% endif %}; padding:1.25rem 1.5rem; border-bottom:2px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <div style="display:flex; align-items:center; gap:1rem;">
-                    <div style="width:50px; height:50px; background:linear-gradient(135deg,#bfdbfe,#93c5fd); border-radius:0.75rem; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
-                        🐾
+                    <div style="width:50px; height:50px; background:linear-gradient(135deg,#bfdbfe,#93c5fd); border-radius:0.75rem; display:flex; align-items:center; justify-content:center;">
+                        <i class="bi bi-heart-pulse" style="color:#1565C0; font-size:1.25rem;"></i>
                     </div>
                     <div>
                         <h3 style="font-weight:700; color:#0f172a; font-size:1.125rem; margin-bottom:0.25rem;">
@@ -113,7 +259,7 @@
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
                             <div style="background:#f0fdf4; border-radius:0.75rem; padding:1rem; text-align:center;">
-                                <div style="font-size:1.5rem; margin-bottom:0.25rem;">⚖️</div>
+                                <i class="bi bi-clipboard2" style="font-size:1.5rem; color:#059669;"></i>
                                 <div style="font-size:1.25rem; font-weight:700; color:#059669;">
                                     {{ apt.consultation.weight_at_visit|default:"—" }}
                                     {% if apt.consultation.weight_at_visit %}<span style="font-size:0.875rem;">kg</span>{% endif %}
@@ -121,7 +267,7 @@
                                 <div style="font-size:0.75rem; color:#6b7280;">Peso</div>
                             </div>
                             <div style="background:#fff7ed; border-radius:0.75rem; padding:1rem; text-align:center;">
-                                <div style="font-size:1.5rem; margin-bottom:0.25rem;">🌡️</div>
+                                <i class="bi bi-thermometer-half" style="font-size:1.5rem; color:#ea580c;"></i>
                                 <div style="font-size:1.25rem; font-weight:700; color:#ea580c;">
                                     {{ apt.consultation.temperature|default:"—" }}
                                     {% if apt.consultation.temperature %}<span style="font-size:0.875rem;">°C</span>{% endif %}

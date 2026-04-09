@@ -1,0 +1,670 @@
+{% extends 'admin_dashboard/base.html' %}
+{% block title %}Hospitalización — {{ hosp.pet.name }} - Vetify Admin{% endblock %}
+{% block page_title %}Expediente de Hospitalización{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: white; border-radius: 1rem; padding: 1.5rem;
+        margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .pet-avatar {
+        width: 72px; height: 72px; border-radius: 1rem;
+        background: linear-gradient(135deg,#BBDEFB,#90CAF9);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem; flex-shrink: 0; overflow: hidden;
+    }
+    .pet-avatar img { width:100%; height:100%; object-fit:cover; }
+    .pet-name { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    .pet-meta { font-size: .875rem; color: #6b7280; margin-top: .25rem; }
+
+    .badge { display:inline-block; padding:.3rem .9rem; border-radius:9999px; font-size:.75rem; font-weight:700; }
+    .badge-active    { background:#fee2e2; color:#991b1b; }
+    .badge-discharged{ background:#d1fae5; color:#065f46; }
+    .badge-transferred{background:#fef9c3; color:#854d0e; }
+    .badge-deceased  { background:#f3f4f6; color:#374151; }
+
+    .status-badge { display:inline-block; padding:.25rem .75rem; border-radius:9999px; font-size:.75rem; font-weight:600; }
+    .status-critical { background:#fee2e2; color:#991b1b; }
+    .status-serious  { background:#ffedd5; color:#9a3412; }
+    .status-stable   { background:#dbeafe; color:#1e40af; }
+    .status-improving{ background:#e0f2fe; color:#0369a1; }
+    .status-good     { background:#d1fae5; color:#065f46; }
+
+    .layout { display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+    .card {
+        background: white; border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem; overflow: hidden;
+    }
+    .card-header {
+        padding: 1.25rem 1.5rem; border-bottom: 1px solid #f3f4f6;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; color: #0f172a; }
+    .card-body { padding: 1.5rem; }
+
+    .btn { padding:.6rem 1.2rem; border:none; border-radius:.5rem; font-weight:600; cursor:pointer; font-size:.875rem; transition:.2s; }
+    .btn-primary { background:#1565C0; color:white; }
+    .btn-primary:hover { background:#1251A0; }
+    .btn-success { background:#059669; color:white; }
+    .btn-danger  { background:#ef4444; color:white; }
+    .btn-sm { padding:.4rem .8rem; font-size:.8rem; }
+    .btn-outline { background:white; border:1.5px solid #d1d5db; color:#374151; }
+    .btn-outline:hover { border-color:#1565C0; color:#1565C0; }
+
+    /* Monitoreo timeline */
+    .timeline { position: relative; padding-left: 2rem; }
+    .timeline::before {
+        content: ''; position: absolute; left: .7rem; top: 0; bottom: 0;
+        width: 2px; background: #e5e7eb;
+    }
+    .timeline-item { position: relative; margin-bottom: 1.5rem; }
+    .timeline-dot {
+        position: absolute; left: -1.65rem; top: .3rem;
+        width: 12px; height: 12px; border-radius: 50%;
+        background: #1565C0; border: 2px solid white;
+        box-shadow: 0 0 0 2px #1565C0;
+    }
+    .timeline-card {
+        background: #f8fafc; border: 1px solid #e5e7eb;
+        border-radius: .75rem; padding: 1rem;
+    }
+    .timeline-time { font-size: .75rem; color: #6b7280; margin-bottom: .5rem; }
+    .vitals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px,1fr)); gap: .75rem; margin-bottom: .75rem; }
+    .vital-item { text-align: center; background: white; border-radius: .5rem; padding: .6rem; }
+    .vital-value { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .vital-label { font-size: .65rem; color: #6b7280; margin-top: .1rem; }
+
+    /* Tratamientos */
+    .treatment-row {
+        display: flex; align-items: center; gap: 1rem;
+        padding: .875rem; border-bottom: 1px solid #f3f4f6;
+        flex-wrap: wrap;
+    }
+    .treatment-row:last-child { border-bottom: none; }
+    .treatment-med { font-weight: 600; color: #0f172a; flex: 1; min-width: 120px; }
+    .treatment-detail { font-size: .8rem; color: #6b7280; }
+    .t-badge { display:inline-block; padding:.2rem .6rem; border-radius:9999px; font-size:.7rem; font-weight:600; }
+    .t-active   { background:#d1fae5; color:#065f46; }
+    .t-suspended{ background:#fef9c3; color:#854d0e; }
+    .t-completed{ background:#f3f4f6; color:#374151; }
+
+    /* Orden médica */
+    .order-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .order-item {
+        background: #f8fafc; border-radius: .75rem; padding: 1rem;
+        border: 1px solid #e5e7eb;
+    }
+    .order-item.active { background: #eff6ff; border-color: #bfdbfe; }
+    .order-item-title { font-weight: 700; font-size: .875rem; color: #0f172a; display:flex; align-items:center; gap:.5rem; }
+    .order-detail { font-size: .8rem; color: #374151; margin-top: .4rem; }
+
+    /* Info lateral */
+    .info-item { padding: .75rem 0; border-bottom: 1px solid #f3f4f6; }
+    .info-item:last-child { border-bottom: none; }
+    .info-label { font-size: .75rem; color: #6b7280; margin-bottom: .2rem; }
+    .info-value { font-size: .875rem; font-weight: 600; color: #0f172a; }
+
+    /* Formularios en modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal-box { background:white; border-radius:1rem; padding:2rem; width:100%; max-width:580px; max-height:90vh; overflow-y:auto; margin:1rem; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; }
+    .modal-title { font-size:1.125rem; font-weight:700; color:#0f172a; }
+    .modal-close { background:none; border:none; font-size:1.5rem; cursor:pointer; color:#6b7280; }
+    .form-group { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; }
+    .form-label { font-size:.8rem; font-weight:600; color:#374151; }
+    .form-input { padding:.7rem .875rem; border:1px solid #d1d5db; border-radius:.5rem; font-size:.875rem; width:100%; }
+    .form-input:focus { outline:none; border-color:#1565C0; }
+    .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .form-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; }
+    .checkbox-label { display:flex; align-items:center; gap:.5rem; font-size:.875rem; color:#374151; cursor:pointer; }
+
+    .empty-mini { text-align:center; padding:2rem; color:#9ca3af; font-size:.875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Header de la hospitalización -->
+<div class="page-header">
+    <a href="{% url 'admin_dashboard:hospitalizations' %}"
+       style="color:#6b7280; text-decoration:none; font-size:.875rem;">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+    <div class="pet-avatar">
+        {% if hosp.pet.photo %}
+            <img src="{{ hosp.pet.photo.url }}">
+        {% else %}
+            {{ hosp.pet.get_emoji }}
+        {% endif %}
+    </div>
+    <div style="flex:1;">
+        <div class="pet-name">{{ hosp.pet.name }}</div>
+        <div class="pet-meta">
+            {{ hosp.pet.get_pet_type_display }}
+            {% if hosp.pet.breed %} · {{ hosp.pet.breed }}{% endif %}
+            · Dueño: {{ hosp.pet.owner.get_full_name|default:hosp.pet.owner.username }}
+        </div>
+        <div style="margin-top:.5rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+            <span class="badge badge-{{ hosp.status }}">{{ hosp.get_status_display }}</span>
+            <span class="status-badge status-{{ hosp.patient_status }}">{{ hosp.get_patient_status_display }}</span>
+        </div>
+    </div>
+    {% if hosp.status == 'active' %}
+    <button onclick="document.getElementById('modalAlta').style.display='flex'"
+            class="btn btn-success">
+        <i class="bi bi-check-circle"></i> Dar de alta
+    </button>
+    {% endif %}
+</div>
+
+<div class="layout">
+    <!-- Columna principal -->
+    <div>
+
+        <!-- Monitoreo -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="bi bi-activity"></i> Monitoreo y Signos Vitales</span>
+                {% if hosp.status == 'active' %}
+                <button onclick="document.getElementById('modalMonitoreo').style.display='flex'"
+                        class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus"></i> Nuevo registro
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if monitoring %}
+                <div class="timeline">
+                    {% for rec in monitoring %}
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-card">
+                            <div class="timeline-time">
+                                <i class="bi bi-clock"></i>
+                                {{ rec.recorded_at|date:"d/m/Y H:i" }}
+                                {% if rec.recorded_by %}
+                                    · Registrado por {{ rec.recorded_by.username }}
+                                {% endif %}
+                                &nbsp;
+                                <span class="status-badge status-{{ rec.general_status }}">
+                                    {{ rec.get_general_status_display }}
+                                </span>
+                            </div>
+                            <div class="vitals-grid">
+                                {% if rec.temperature %}
+                                <div class="vital-item">
+                                    <div class="vital-value">{{ rec.temperature }}°C</div>
+                                    <div class="vital-label">Temperatura</div>
+                                </div>
+                                {% endif %}
+                                {% if rec.heart_rate %}
+                                <div class="vital-item">
+                                    <div class="vital-value">{{ rec.heart_rate }}</div>
+                                    <div class="vital-label">FC (lpm)</div>
+                                </div>
+                                {% endif %}
+                                {% if rec.respiratory_rate %}
+                                <div class="vital-item">
+                                    <div class="vital-value">{{ rec.respiratory_rate }}</div>
+                                    <div class="vital-label">FR (rpm)</div>
+                                </div>
+                                {% endif %}
+                                {% if rec.weight %}
+                                <div class="vital-item">
+                                    <div class="vital-value">{{ rec.weight }} kg</div>
+                                    <div class="vital-label">Peso</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% if rec.observations %}
+                            <div style="font-size:.8rem; color:#374151; background:white; border-radius:.5rem; padding:.6rem; margin-top:.4rem;">
+                                {{ rec.observations }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-mini">
+                    <i class="bi bi-activity" style="font-size:2rem; display:block; margin-bottom:.5rem; opacity:.3;"></i>
+                    Sin registros de monitoreo aún
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tratamientos -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="bi bi-capsule"></i> Tratamientos y Medicación</span>
+                {% if hosp.status == 'active' %}
+                <button onclick="document.getElementById('modalTratamiento').style.display='flex'"
+                        class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus"></i> Agregar
+                </button>
+                {% endif %}
+            </div>
+            <div>
+                {% if treatments %}
+                {% for t in treatments %}
+                <div class="treatment-row">
+                    <div>
+                        <div class="treatment-med">{{ t.medication }}</div>
+                        <div class="treatment-detail">
+                            {{ t.dose }} · {{ t.frequency }} · {{ t.get_route_display }}
+                            {% if t.notes %} · {{ t.notes }}{% endif %}
+                        </div>
+                    </div>
+                    <span class="t-badge t-{{ t.status }}">{{ t.get_status_display }}</span>
+                    {% if hosp.status == 'active' %}
+                    <form method="POST" action="{% url 'admin_dashboard:update_treatment_status' hosp.pk t.pk %}"
+                          style="display:flex; gap:.4rem; align-items:center;">
+                        {% csrf_token %}
+                        <select name="status" class="form-input" style="padding:.35rem; font-size:.75rem; width:auto;">
+                            <option value="active"    {% if t.status == 'active' %}selected{% endif %}>Activo</option>
+                            <option value="suspended" {% if t.status == 'suspended' %}selected{% endif %}>Suspender</option>
+                            <option value="completed" {% if t.status == 'completed' %}selected{% endif %}>Completado</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline btn-sm">
+                            <i class="bi bi-check"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="empty-mini">Sin tratamientos registrados</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Orden médica -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="bi bi-clipboard2-pulse"></i> Orden Médica</span>
+                {% if hosp.status == 'active' %}
+                <button onclick="document.getElementById('modalOrden').style.display='flex'"
+                        class="btn btn-primary btn-sm">
+                    <i class="bi bi-pencil"></i> Editar
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="order-grid">
+                    <div class="order-item {% if order.fluid_therapy %}active{% endif %}">
+                        <div class="order-item-title">
+                            <i class="bi bi-droplet{% if order.fluid_therapy %}-fill{% endif %}"
+                               style="color:{% if order.fluid_therapy %}#1565C0{% else %}#9ca3af{% endif %};"></i>
+                            Fluidoterapia
+                            {% if order.fluid_therapy %}
+                                <span style="font-size:.7rem; background:#dbeafe; color:#1e40af; padding:.1rem .5rem; border-radius:9999px;">Activa</span>
+                            {% endif %}
+                        </div>
+                        {% if order.fluid_therapy_detail %}
+                        <div class="order-detail">{{ order.fluid_therapy_detail }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="order-item {% if order.diet != 'normal' %}active{% endif %}">
+                        <div class="order-item-title">
+                            <i class="bi bi-egg-fried" style="color:#f59e0b;"></i>
+                            Dieta: {{ order.get_diet_display }}
+                        </div>
+                        {% if order.diet_notes %}
+                        <div class="order-detail">{{ order.diet_notes }}</div>
+                        {% endif %}
+                    </div>
+
+                    {% if order.laboratory %}
+                    <div class="order-item active">
+                        <div class="order-item-title">
+                            <i class="bi bi-flask" style="color:#7c3aed;"></i> Laboratorio
+                        </div>
+                        {% if order.laboratory_detail %}
+                        <div class="order-detail">{{ order.laboratory_detail }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if order.xray %}
+                    <div class="order-item active">
+                        <div class="order-item-title">
+                            <i class="bi bi-radioactive" style="color:#ef4444;"></i> Rayos X
+                        </div>
+                        {% if order.xray_detail %}
+                        <div class="order-detail">{{ order.xray_detail }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if order.ultrasound %}
+                    <div class="order-item active">
+                        <div class="order-item-title">
+                            <i class="bi bi-soundwave" style="color:#0891b2;"></i> Ultrasonido
+                        </div>
+                        {% if order.ultrasound_detail %}
+                        <div class="order-detail">{{ order.ultrasound_detail }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if order.special_instructions %}
+                <div style="margin-top:1rem; background:#fffbeb; border:1px solid #fde68a; border-radius:.75rem; padding:1rem;">
+                    <div style="font-weight:700; font-size:.875rem; color:#92400e; margin-bottom:.4rem;">
+                        <i class="bi bi-exclamation-triangle"></i> Indicaciones especiales
+                    </div>
+                    <div style="font-size:.875rem; color:#374151;">{{ order.special_instructions }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Columna lateral -->
+    <div>
+
+        <!-- Info general -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="bi bi-info-circle"></i> Información General</span>
+            </div>
+            <div class="card-body" style="padding-top:.5rem; padding-bottom:.5rem;">
+                <div class="info-item">
+                    <div class="info-label">Motivo de ingreso</div>
+                    <div class="info-value" style="font-weight:400; font-size:.875rem;">{{ hosp.reason }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Diagnóstico inicial</div>
+                    <div class="info-value" style="font-weight:400; font-size:.875rem;">{{ hosp.initial_diagnosis }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Veterinario responsable</div>
+                    <div class="info-value">
+                        {% if hosp.veterinarian %}Dr(a). {{ hosp.veterinarian.name }}
+                        {% else %}Sin asignar{% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Fecha de ingreso</div>
+                    <div class="info-value">{{ hosp.admission_date|date:"d/m/Y H:i" }}</div>
+                </div>
+                {% if hosp.discharge_date %}
+                <div class="info-item">
+                    <div class="info-label">Fecha de alta</div>
+                    <div class="info-value">{{ hosp.discharge_date|date:"d/m/Y H:i" }}</div>
+                </div>
+                {% endif %}
+                {% if hosp.notes %}
+                <div class="info-item">
+                    <div class="info-label">Notas</div>
+                    <div class="info-value" style="font-weight:400; font-size:.875rem;">{{ hosp.notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Datos mascota -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="bi bi-heart-pulse"></i> Datos de la Mascota</span>
+            </div>
+            <div class="card-body" style="padding-top:.5rem; padding-bottom:.5rem;">
+                <div class="info-item">
+                    <div class="info-label">Especie / Raza</div>
+                    <div class="info-value">
+                        {{ hosp.pet.get_pet_type_display }}
+                        {% if hosp.pet.breed %} · {{ hosp.pet.breed }}{% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Edad</div>
+                    <div class="info-value">{{ hosp.pet.age }} año{{ hosp.pet.age|pluralize }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Peso registrado</div>
+                    <div class="info-value">{{ hosp.pet.weight }} kg</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Vacunación</div>
+                    <div class="info-value">{{ hosp.pet.get_vaccination_status_display }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Dueño</div>
+                    <div class="info-value">
+                        {{ hosp.pet.owner.get_full_name|default:hosp.pet.owner.username }}<br>
+                        <span style="font-weight:400; font-size:.8rem; color:#6b7280;">{{ hosp.pet.owner.email }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ═══════════ MODALES ═══════════ -->
+
+<!-- Modal: Nuevo monitoreo -->
+<div id="modalMonitoreo" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="bi bi-activity"></i> Nuevo Registro de Monitoreo</h2>
+            <button onclick="document.getElementById('modalMonitoreo').style.display='none'" class="modal-close">✕</button>
+        </div>
+        <form method="POST" action="{% url 'admin_dashboard:add_monitoring' hosp.pk %}">
+            {% csrf_token %}
+            <div class="form-grid-4">
+                <div class="form-group">
+                    <label class="form-label">Temperatura (°C)</label>
+                    <input type="number" name="temperature" step="0.1" min="30" max="45" class="form-input" placeholder="38.5">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">FC (lpm)</label>
+                    <input type="number" name="heart_rate" min="0" max="300" class="form-input" placeholder="80">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">FR (rpm)</label>
+                    <input type="number" name="respiratory_rate" min="0" max="100" class="form-input" placeholder="20">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Peso (kg)</label>
+                    <input type="number" name="weight" step="0.01" min="0" class="form-input" placeholder="5.0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Estado general</label>
+                <select name="general_status" class="form-input">
+                    {% for val, label in patient_status_choices %}
+                    <option value="{{ val }}" {% if val == hosp.patient_status %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Observaciones</label>
+                <textarea name="observations" class="form-input" rows="3"
+                          placeholder="Descripción del estado, respuesta al tratamiento, cambios observados..."></textarea>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button type="button" onclick="document.getElementById('modalMonitoreo').style.display='none'"
+                        class="btn btn-outline" style="flex:1;">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">
+                    <i class="bi bi-plus-circle"></i> Guardar registro
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Nuevo tratamiento -->
+<div id="modalTratamiento" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="bi bi-capsule"></i> Agregar Tratamiento</h2>
+            <button onclick="document.getElementById('modalTratamiento').style.display='none'" class="modal-close">✕</button>
+        </div>
+        <form method="POST" action="{% url 'admin_dashboard:add_treatment' hosp.pk %}">
+            {% csrf_token %}
+            <div class="form-grid-2">
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label class="form-label">Medicamento *</label>
+                    <input type="text" name="medication" required class="form-input" placeholder="Nombre del medicamento">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Dosis *</label>
+                    <input type="text" name="dose" required class="form-input" placeholder="ej: 5mg/kg">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Frecuencia *</label>
+                    <input type="text" name="frequency" required class="form-input" placeholder="ej: cada 8 horas">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Vía de administración</label>
+                    <select name="route" class="form-input">
+                        {% for val, label in route_choices %}
+                        <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notas</label>
+                    <input type="text" name="notes" class="form-input" placeholder="Instrucciones adicionales">
+                </div>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button type="button" onclick="document.getElementById('modalTratamiento').style.display='none'"
+                        class="btn btn-outline" style="flex:1;">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">
+                    <i class="bi bi-plus-circle"></i> Agregar tratamiento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Orden médica -->
+<div id="modalOrden" class="modal-overlay">
+    <div class="modal-box" style="max-width:640px;">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="bi bi-clipboard2-pulse"></i> Orden Médica</h2>
+            <button onclick="document.getElementById('modalOrden').style.display='none'" class="modal-close">✕</button>
+        </div>
+        <form method="POST" action="{% url 'admin_dashboard:update_order' hosp.pk %}">
+            {% csrf_token %}
+
+            <!-- Fluidoterapia -->
+            <div style="background:#f8fafc; border-radius:.75rem; padding:1rem; margin-bottom:1rem;">
+                <label class="checkbox-label" style="font-weight:700; margin-bottom:.5rem;">
+                    <input type="checkbox" name="fluid_therapy" {% if order.fluid_therapy %}checked{% endif %}>
+                    <i class="bi bi-droplet-fill" style="color:#1565C0;"></i> Fluidoterapia
+                </label>
+                <input type="text" name="fluid_therapy_detail" class="form-input"
+                       value="{{ order.fluid_therapy_detail }}"
+                       placeholder="Tipo, velocidad, volumen...">
+            </div>
+
+            <!-- Dieta -->
+            <div style="background:#f8fafc; border-radius:.75rem; padding:1rem; margin-bottom:1rem;">
+                <div class="form-group" style="margin-bottom:.5rem;">
+                    <label class="form-label">Dieta</label>
+                    <select name="diet" class="form-input">
+                        {% for val, label in diet_choices %}
+                        <option value="{{ val }}" {% if order.diet == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <input type="text" name="diet_notes" class="form-input"
+                       value="{{ order.diet_notes }}" placeholder="Detalles de la dieta...">
+            </div>
+
+            <!-- Estudios -->
+            <div style="background:#f8fafc; border-radius:.75rem; padding:1rem; margin-bottom:1rem;">
+                <div style="font-weight:700; font-size:.875rem; margin-bottom:.75rem; color:#0f172a;">
+                    <i class="bi bi-flask"></i> Estudios diagnósticos
+                </div>
+                <div style="display:flex; flex-direction:column; gap:.75rem;">
+                    <div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="laboratory" {% if order.laboratory %}checked{% endif %}>
+                            <i class="bi bi-flask" style="color:#7c3aed;"></i> Laboratorio
+                        </label>
+                        <input type="text" name="laboratory_detail" class="form-input" style="margin-top:.4rem;"
+                               value="{{ order.laboratory_detail }}" placeholder="BH, QS, UA...">
+                    </div>
+                    <div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="xray" {% if order.xray %}checked{% endif %}>
+                            <i class="bi bi-radioactive" style="color:#ef4444;"></i> Rayos X
+                        </label>
+                        <input type="text" name="xray_detail" class="form-input" style="margin-top:.4rem;"
+                               value="{{ order.xray_detail }}" placeholder="Zona, proyecciones...">
+                    </div>
+                    <div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="ultrasound" {% if order.ultrasound %}checked{% endif %}>
+                            <i class="bi bi-soundwave" style="color:#0891b2;"></i> Ultrasonido
+                        </label>
+                        <input type="text" name="ultrasound_detail" class="form-input" style="margin-top:.4rem;"
+                               value="{{ order.ultrasound_detail }}" placeholder="Abdominal, cardiaco...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Indicaciones especiales -->
+            <div class="form-group">
+                <label class="form-label">Indicaciones especiales</label>
+                <textarea name="special_instructions" class="form-input" rows="3"
+                          placeholder="Reposo, manejo, cuidados especiales...">{{ order.special_instructions }}</textarea>
+            </div>
+
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button type="button" onclick="document.getElementById('modalOrden').style.display='none'"
+                        class="btn btn-outline" style="flex:1;">Cancelar</button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">
+                    <i class="bi bi-save"></i> Guardar orden médica
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Dar de alta -->
+<div id="modalAlta" class="modal-overlay">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="bi bi-check-circle"></i> Dar de Alta — {{ hosp.pet.name }}</h2>
+            <button onclick="document.getElementById('modalAlta').style.display='none'" class="modal-close">✕</button>
+        </div>
+        <form method="POST" action="{% url 'admin_dashboard:discharge_hospitalization' hosp.pk %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Tipo de alta</label>
+                <select name="status" class="form-input">
+                    <option value="discharged">Alta médica</option>
+                    <option value="transferred">Transferida</option>
+                    <option value="deceased">Fallecida</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notas de alta / resumen</label>
+                <textarea name="discharge_notes" class="form-input" rows="4"
+                          placeholder="Condición al alta, recomendaciones, seguimiento...">{{ hosp.notes }}</textarea>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1rem;">
+                <button type="button" onclick="document.getElementById('modalAlta').style.display='none'"
+                        class="btn btn-outline" style="flex:1;">Cancelar</button>
+                <button type="submit" class="btn btn-success" style="flex:2;">
+                    <i class="bi bi-check-circle"></i> Confirmar alta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

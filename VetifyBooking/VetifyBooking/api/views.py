@@ -1,12 +1,13 @@
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from django.http import HttpResponse
 import json
 
 from booking.models import (
@@ -498,3 +499,121 @@ def update_avatar(request):
     profile.avatar = request.FILES['avatar']
     profile.save()
     return Response({'message': 'Avatar actualizado'})
+
+from booking.models import Hospitalization, HospitalizationMonitoring, HospitalizationTreatment, HospitalizationOrder
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def hospitalizaciones_lista(request):
+    """Hospitalizaciones de las mascotas del usuario autenticado"""
+    mascotas = Pet.objects.filter(owner=request.user)
+    hospitalizaciones = Hospitalization.objects.filter(
+        pet__in=mascotas
+    ).select_related('pet', 'veterinarian').order_by('-admission_date')
+
+    data = []
+    for h in hospitalizaciones:
+        data.append({
+            'id': h.id,
+            'pet_id': h.pet.id,
+            'pet_name': h.pet.name,
+            'pet_type': h.pet.pet_type,
+            'pet_photo': request.build_absolute_uri(h.pet.photo.url) if h.pet.photo else None,
+            'veterinarian_name': h.veterinarian.name if h.veterinarian else None,
+            'reason': h.reason,
+            'initial_diagnosis': h.initial_diagnosis,
+            'admission_date': h.admission_date.isoformat(),
+            'discharge_date': h.discharge_date.isoformat() if h.discharge_date else None,
+            'patient_status': h.patient_status,
+            'patient_status_display': h.get_patient_status_display(),
+            'status': h.status,
+            'status_display': h.get_status_display(),
+            'notes': h.notes,
+            'monitoring_count': h.monitoring_records.count(),
+        })
+    return Response(data)
+
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def hospitalizacion_detalle(request, pk):
+    """Detalle completo de una hospitalización"""
+    try:
+        h = Hospitalization.objects.select_related(
+            'pet', 'veterinarian'
+        ).get(pk=pk, pet__owner=request.user)
+    except Hospitalization.DoesNotExist:
+        return Response({'error': 'No encontrada'}, status=404)
+
+    # Monitoreos
+    monitoring = []
+    for rec in h.monitoring_records.all():
+        monitoring.append({
+            'id': rec.id,
+            'recorded_at': rec.recorded_at.isoformat(),
+            'temperature': str(rec.temperature) if rec.temperature else None,
+            'heart_rate': rec.heart_rate,
+            'respiratory_rate': rec.respiratory_rate,
+            'weight': str(rec.weight) if rec.weight else None,
+            'general_status': rec.general_status,
+            'general_status_display': rec.get_general_status_display(),
+            'observations': rec.observations,
+        })
+
+    # Tratamientos
+    treatments = []
+    for t in h.treatments.all():
+        treatments.append({
+            'id': t.id,
+            'medication': t.medication,
+            'dose': t.dose,
+            'frequency': t.frequency,
+            'route': t.get_route_display(),
+            'status': t.status,
+            'status_display': t.get_status_display(),
+            'notes': t.notes,
+        })
+
+    # Orden médica
+    order = None
+    try:
+        o = h.medical_order
+        order = {
+            'fluid_therapy': o.fluid_therapy,
+            'fluid_therapy_detail': o.fluid_therapy_detail,
+            'diet': o.get_diet_display(),
+            'diet_notes': o.diet_notes,
+            'laboratory': o.laboratory,
+            'laboratory_detail': o.laboratory_detail,
+            'xray': o.xray,
+            'xray_detail': o.xray_detail,
+            'ultrasound': o.ultrasound,
+            'ultrasound_detail': o.ultrasound_detail,
+            'special_instructions': o.special_instructions,
+        }
+    except HospitalizationOrder.DoesNotExist:
+        pass
+
+    data = {
+        'id': h.id,
+        'pet_id': h.pet.id,
+        'pet_name': h.pet.name,
+        'pet_type': h.pet.pet_type,
+        'pet_photo': request.build_absolute_uri(h.pet.photo.url) if h.pet.photo else None,
+        'veterinarian_name': h.veterinarian.name if h.veterinarian else None,
+        'reason': h.reason,
+        'initial_diagnosis': h.initial_diagnosis,
+        'admission_date': h.admission_date.isoformat(),
+        'discharge_date': h.discharge_date.isoformat() if h.discharge_date else None,
+        'patient_status': h.patient_status,
+        'patient_status_display': h.get_patient_status_display(),
+        'status': h.status,
+        'status_display': h.get_status_display(),
+        'notes': h.notes,
+        'monitoring': monitoring,
+        'treatments': treatments,
+        'order': order,
+    }
+    return Response(data)

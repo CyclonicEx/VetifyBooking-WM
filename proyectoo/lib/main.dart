@@ -302,6 +302,22 @@ class ApiService {
     throw Exception('Error consultas: ${res.statusCode}');
   }
 
+  // ── HOSPITALIZACIONES ────────────────────────────
+
+  static Future<List<dynamic>> getHospitalizaciones() async {
+    final res = await http.get(
+        Uri.parse('$baseUrl/hospitalizaciones/'), headers: _headers);
+    if (res.statusCode == 200) return json.decode(res.body);
+    throw Exception('Error hospitalizaciones: ${res.statusCode}');
+  }
+
+  static Future<Map<String, dynamic>> getHospitalizacionDetalle(int id) async {
+    final res = await http.get(
+        Uri.parse('$baseUrl/hospitalizaciones/$id/'), headers: _headers);
+    if (res.statusCode == 200) return json.decode(res.body);
+    throw Exception('Error hospitalizacion detalle: ${res.statusCode}');
+  }
+
   // ── PERFIL ───────────────────────────────────────
 
   static Future<List<dynamic>> getPerfiles() async {
@@ -725,6 +741,58 @@ class CitaCompleta extends Cita {
   }
 }
 
+class Hospitalizacion {
+  final int id;
+  final int petId;
+  final String petName, petType;
+  final String? petPhoto, veterinarianName;
+  final String reason, initialDiagnosis;
+  final String status, statusDisplay, patientStatus, patientStatusDisplay;
+  final String admissionDate;
+  final String? dischargeDate, notes;
+  final int monitoringCount;
+  final List<dynamic> monitoring;
+  final List<dynamic> treatments;
+  final Map<String, dynamic>? order;
+
+  Hospitalizacion({
+    required this.id, required this.petId,
+    required this.petName, required this.petType,
+    this.petPhoto, this.veterinarianName,
+    required this.reason, required this.initialDiagnosis,
+    required this.status, required this.statusDisplay,
+    required this.patientStatus, required this.patientStatusDisplay,
+    required this.admissionDate,
+    this.dischargeDate, this.notes,
+    this.monitoringCount = 0,
+    this.monitoring = const [],
+    this.treatments = const [],
+    this.order,
+  });
+
+  factory Hospitalizacion.fromJson(Map<String, dynamic> j) => Hospitalizacion(
+    id: j['id'],
+    petId: j['pet_id'],
+    petName: j['pet_name'] ?? '',
+    petType: j['pet_type'] ?? '',
+    petPhoto: j['pet_photo'],
+    veterinarianName: j['veterinarian_name'],
+    reason: j['reason'] ?? '',
+    initialDiagnosis: j['initial_diagnosis'] ?? '',
+    status: j['status'] ?? '',
+    statusDisplay: j['status_display'] ?? '',
+    patientStatus: j['patient_status'] ?? '',
+    patientStatusDisplay: j['patient_status_display'] ?? '',
+    admissionDate: j['admission_date'] ?? '',
+    dischargeDate: j['discharge_date'],
+    notes: j['notes'],
+    monitoringCount: j['monitoring_count'] ?? 0,
+    monitoring: j['monitoring'] ?? [],
+    treatments: j['treatments'] ?? [],
+    order: j['order'],
+  );
+}
+
 // ════════════════════════════════════════════════════════════════
 //  PROVIDER
 // ════════════════════════════════════════════════════════════════
@@ -737,6 +805,7 @@ class AppProvider with ChangeNotifier {
   List<AppNotificacion> notificaciones = [];
   List<Servicio> servicios = [];
   List<CitaCompleta> historialMedico = [];
+  List<Hospitalizacion> hospitalizaciones = [];
   /// Horarios de la clínica desde el API (RF-06)
   List<Map<String, dynamic>> horariosClinica = [];
   List<String> availableSlots = [];  // RF-06: Horarios disponibles
@@ -887,11 +956,23 @@ class AppProvider with ChangeNotifier {
       final vRows = await ApiService.getConsultas();
       visitas = vRows.map((r) => VisitaMedica.fromJson(r)).toList();
 
+      await cargarHospitalizaciones();
+
       generarNotificaciones();
     } catch (e) {
       debugPrint('Error cargarTodo: $e');
     }
     cargando = false; notifyListeners();
+  }
+
+  Future<void> cargarHospitalizaciones() async {
+    try {
+      final rows = await ApiService.getHospitalizaciones();
+      hospitalizaciones = rows.map((r) => Hospitalizacion.fromJson(r)).toList();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error hospitalizaciones: $e');
+    }
   }
 
   // ── Notificaciones ───────────────────────────────
@@ -4922,18 +5003,48 @@ class HistorialMedicoScreen extends StatelessWidget {
         title: const Text('Historial Médico'),
         backgroundColor: kPrimary, foregroundColor: Colors.white,
       ),
-      body: app.historialMedico.isEmpty
-          ? Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.folder_open, size: 64, color: Colors.grey.shade300),
-              const SizedBox(height: 16),
-              const Text('Sin historial médico',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
-              const SizedBox(height: 6),
-              Text('Las citas completadas aparecerán aquí',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
-            ]))
-          : ListView.builder(
+      body: Column(children: [
+        if (app.hospitalizaciones.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => HospitalizacionesScreen(app: app),
+              )),
+              child: Container(
+                width: double.infinity, padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(children: [
+                  Icon(Icons.local_hospital, color: Colors.red.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Hospitalizaciones (${app.hospitalizaciones.length})',
+                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+                    Text('Ver historial de hospitalizaciones',
+                        style: TextStyle(fontSize: 12, color: Colors.red.shade400)),
+                  ])),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.red.shade400),
+                ]),
+              ),
+            ),
+          ),
+        Expanded(
+          child: app.historialMedico.isEmpty
+              ? Center(child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.folder_open, size: 64, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  const Text('Sin historial médico',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  const SizedBox(height: 6),
+                  Text('Las citas completadas aparecerán aquí',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                ]))
+              : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: app.historialMedico.length,
               itemBuilder: (_, i) {
@@ -4978,6 +5089,8 @@ class HistorialMedicoScreen extends StatelessWidget {
                 );
               },
             ),
+        ),
+      ]),
     );
   }
 }
@@ -5220,4 +5333,323 @@ void main() async {
       home: const SplashScreen(),
     ),
   ));
+}
+
+// ════════════════════════════════════════════════════════════════
+//  HOSPITALIZACIONES
+// ════════════════════════════════════════════════════════════════
+
+class HospitalizacionesScreen extends StatelessWidget {
+  final AppProvider app;
+  const HospitalizacionesScreen({super.key, required this.app});
+
+  Color _colorEstado(String status) {
+    switch (status) {
+      case 'active': return Colors.red;
+      case 'discharged': return Colors.green;
+      case 'transferred': return Colors.orange;
+      default: return Colors.grey;
+    }
+  }
+
+  Color _colorPaciente(String status) {
+    switch (status) {
+      case 'critical': return Colors.red;
+      case 'serious': return Colors.orange;
+      case 'stable': return Colors.blue;
+      case 'improving': return Colors.lightBlue;
+      default: return Colors.green;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      appBar: AppBar(
+        title: const Text('Hospitalizaciones'),
+        backgroundColor: kPrimary, foregroundColor: Colors.white,
+      ),
+      body: app.hospitalizaciones.isEmpty
+          ? Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.local_hospital_outlined, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              const Text('Sin hospitalizaciones',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
+              const SizedBox(height: 6),
+              Text('Las hospitalizaciones de tus mascotas aparecerán aquí',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  textAlign: TextAlign.center),
+            ]))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: app.hospitalizaciones.length,
+              itemBuilder: (_, i) {
+                final h = app.hospitalizaciones[i];
+                return GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => HospitalizacionDetalleScreen(hospitalizacionId: h.id),
+                  )),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border(left: BorderSide(color: _colorEstado(h.status), width: 4)),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Container(
+                            width: 48, height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: const Color(0xFFBBDEFB),
+                            ),
+                            child: h.petPhoto != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(h.petPhoto!, fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Icon(Icons.pets, color: kPrimary)))
+                                : const Icon(Icons.pets, color: kPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(h.petName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _colorEstado(h.status).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(h.statusDisplay,
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                                        color: _colorEstado(h.status))),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: _colorPaciente(h.patientStatus).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(h.patientStatusDisplay,
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                                        color: _colorPaciente(h.patientStatus))),
+                              ),
+                            ]),
+                          ])),
+                          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text('Dx: ${h.initialDiagnosis}',
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          Icon(Icons.calendar_today, size: 12, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text('Ingreso: ${h.admissionDate.substring(0, 10)}',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                          if (h.veterinarianName != null) ...[
+                            const SizedBox(width: 12),
+                            Icon(Icons.person_outline, size: 12, color: Colors.grey.shade500),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text('Dr(a). ${h.veterinarianName!}',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500))),
+                          ],
+                        ]),
+                      ]),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class HospitalizacionDetalleScreen extends StatefulWidget {
+  final int hospitalizacionId;
+  const HospitalizacionDetalleScreen({super.key, required this.hospitalizacionId});
+  @override State<HospitalizacionDetalleScreen> createState() => _HospitalizacionDetalleScreenState();
+}
+
+class _HospitalizacionDetalleScreenState extends State<HospitalizacionDetalleScreen> {
+  Hospitalizacion? _hosp;
+  bool _loading = true;
+
+  @override
+  void initState() { super.initState(); _cargar(); }
+
+  Future<void> _cargar() async {
+    try {
+      final data = await ApiService.getHospitalizacionDetalle(widget.hospitalizacionId);
+      setState(() { _hosp = Hospitalizacion.fromJson(data); _loading = false; });
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kBg,
+      appBar: AppBar(
+        title: Text(_hosp?.petName ?? 'Hospitalización'),
+        backgroundColor: kPrimary, foregroundColor: Colors.white,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: kPrimary))
+          : _hosp == null
+              ? const Center(child: Text('No se pudo cargar'))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(children: [
+
+                    // Info general
+                    _secCard('Información General', Icons.info_outline, kPrimary,
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        _fila('Mascota', _hosp!.petName),
+                        if (_hosp!.veterinarianName != null)
+                          _fila('Veterinario', 'Dr(a). ${_hosp!.veterinarianName!}'),
+                        _fila('Ingreso', _hosp!.admissionDate.substring(0, 16).replaceAll('T', ' ')),
+                        if (_hosp!.dischargeDate != null)
+                          _fila('Alta', _hosp!.dischargeDate!.substring(0, 16).replaceAll('T', ' ')),
+                        _fila('Motivo', _hosp!.reason),
+                        _fila('Diagnóstico inicial', _hosp!.initialDiagnosis),
+                        if (_hosp!.notes != null && _hosp!.notes!.isNotEmpty)
+                          _fila('Notas', _hosp!.notes!),
+                      ]),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Monitoreo
+                    if (_hosp!.monitoring.isNotEmpty) ...[
+                      _secCard('Monitoreo', Icons.monitor_heart, Colors.red,
+                        Column(children: _hosp!.monitoring.map((rec) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: kBg, borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(rec['recorded_at']?.toString().substring(0, 16).replaceAll('T', ' ') ?? '',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                            const SizedBox(height: 8),
+                            Wrap(spacing: 12, runSpacing: 8, children: [
+                              if (rec['temperature'] != null) _vital('${rec['temperature']}°C', 'Temp'),
+                              if (rec['heart_rate'] != null) _vital('${rec['heart_rate']}', 'FC'),
+                              if (rec['respiratory_rate'] != null) _vital('${rec['respiratory_rate']}', 'FR'),
+                              if (rec['weight'] != null) _vital('${rec['weight']} kg', 'Peso'),
+                            ]),
+                            if (rec['observations'] != null && rec['observations'].toString().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(rec['observations'], style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+                            ],
+                          ]),
+                        )).toList()),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Tratamientos
+                    if (_hosp!.treatments.isNotEmpty) ...[
+                      _secCard('Tratamientos', Icons.medication, Colors.purple,
+                        Column(children: _hosp!.treatments.map((t) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(children: [
+                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(t['medication'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text('${t['dose']} · ${t['frequency']} · ${t['route']}',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                            ])),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: t['status'] == 'active' ? Colors.green.shade50 : Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(t['status_display'] ?? '',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                                      color: t['status'] == 'active' ? Colors.green.shade700 : Colors.grey.shade600)),
+                            ),
+                          ]),
+                        )).toList()),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Orden médica
+                    if (_hosp!.order != null) ...[
+                      _secCard('Orden Médica', Icons.assignment, Colors.teal,
+                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          _fila('Dieta', _hosp!.order!['diet'] ?? ''),
+                          if (_hosp!.order!['fluid_therapy'] == true)
+                            _fila('Fluidoterapia', _hosp!.order!['fluid_therapy_detail'] ?? 'Activa'),
+                          if (_hosp!.order!['laboratory'] == true)
+                            _fila('Laboratorio', _hosp!.order!['laboratory_detail'] ?? 'Indicado'),
+                          if (_hosp!.order!['xray'] == true)
+                            _fila('Rayos X', _hosp!.order!['xray_detail'] ?? 'Indicado'),
+                          if (_hosp!.order!['ultrasound'] == true)
+                            _fila('Ultrasonido', _hosp!.order!['ultrasound_detail'] ?? 'Indicado'),
+                          if (_hosp!.order!['special_instructions'] != null &&
+                              _hosp!.order!['special_instructions'].toString().isNotEmpty)
+                            _fila('Indicaciones', _hosp!.order!['special_instructions']),
+                        ]),
+                      ),
+                    ],
+
+                    const SizedBox(height: 30),
+                  ]),
+                ),
+    );
+  }
+
+  Widget _secCard(String title, IconData icon, Color color, Widget child) =>
+      Container(
+        width: double.infinity,
+        decoration: _cardDeco(),
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color)),
+          ]),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          child,
+        ]),
+      );
+
+  Widget _fila(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(width: 110, child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500))),
+      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+    ]),
+  );
+
+  Widget _vital(String value, String label) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200)),
+    child: Column(children: [
+      Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+      Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+    ]),
+  );
 }

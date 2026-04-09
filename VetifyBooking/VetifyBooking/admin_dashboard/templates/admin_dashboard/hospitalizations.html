@@ -1,0 +1,360 @@
+{% extends 'admin_dashboard/base.html' %}
+{% block title %}Hospitalizaciones - Vetify Admin{% endblock %}
+{% block page_title %}Hospitalizaciones{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .stat-icon {
+        width: 48px; height: 48px;
+        border-radius: .75rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.375rem;
+    }
+    .stat-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+    .stat-label { font-size: .75rem; color: #6b7280; margin-top: .1rem; }
+
+    .filters-bar {
+        background: white; border-radius: 1rem;
+        padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: .4rem; flex: 1; min-width: 160px; }
+    .filter-label { font-size: .8rem; font-weight: 600; color: #374151; }
+    .filter-input {
+        padding: .6rem .75rem; border: 1px solid #d1d5db;
+        border-radius: .5rem; font-size: .875rem;
+    }
+    .filter-input:focus { outline: none; border-color: #1565C0; }
+
+    .btn { padding: .625rem 1.25rem; border: none; border-radius: .5rem; font-weight: 600; cursor: pointer; font-size: .875rem; transition: .2s; }
+    .btn-primary { background: #1565C0; color: white; }
+    .btn-primary:hover { background: #1251A0; }
+
+    .hosp-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .hosp-card {
+        background: white; border-radius: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        overflow: hidden; transition: .2s;
+        border-left: 4px solid transparent;
+        text-decoration: none; color: inherit; display: block;
+    }
+    .hosp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .hosp-card.active  { border-left-color: #ef4444; }
+    .hosp-card.discharged { border-left-color: #10b981; }
+    .hosp-card.transferred { border-left-color: #f59e0b; }
+    .hosp-card.deceased { border-left-color: #6b7280; }
+
+    .hosp-card-header {
+        padding: 1.25rem 1.25rem .75rem;
+        display: flex; gap: 1rem; align-items: flex-start;
+    }
+    .pet-avatar {
+        width: 52px; height: 52px; border-radius: .75rem;
+        background: linear-gradient(135deg, #BBDEFB, #90CAF9);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem; flex-shrink: 0; overflow: hidden;
+    }
+    .pet-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .pet-name { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .pet-owner { font-size: .8rem; color: #6b7280; margin-top: .1rem; }
+
+    .hosp-card-body { padding: .5rem 1.25rem 1rem; }
+    .diagnosis-text {
+        font-size: .875rem; color: #374151; line-height: 1.5;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+        margin-bottom: .75rem;
+    }
+    .meta-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; }
+    .meta-item { font-size: .75rem; color: #6b7280; display: flex; align-items: center; gap: .3rem; }
+
+    .badge {
+        display: inline-block; padding: .25rem .75rem;
+        border-radius: 9999px; font-size: .7rem; font-weight: 700;
+    }
+    .badge-active { background: #fee2e2; color: #991b1b; }
+    .badge-discharged { background: #d1fae5; color: #065f46; }
+    .badge-transferred { background: #fef9c3; color: #854d0e; }
+    .badge-deceased { background: #f3f4f6; color: #374151; }
+
+    .status-badge {
+        display: inline-block; padding: .2rem .6rem;
+        border-radius: 9999px; font-size: .7rem; font-weight: 600;
+    }
+    .status-critical { background: #fee2e2; color: #991b1b; }
+    .status-serious  { background: #ffedd5; color: #9a3412; }
+    .status-stable   { background: #dbeafe; color: #1e40af; }
+    .status-improving{ background: #e0f2fe; color: #0369a1; }
+    .status-good     { background: #d1fae5; color: #065f46; }
+
+    .hosp-card-footer {
+        padding: .75rem 1.25rem;
+        border-top: 1px solid #f3f4f6;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .empty-state { text-align: center; padding: 4rem; color: #9ca3af; }
+    .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: .4; }
+
+    /* Modal */
+    .modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); z-index: 1000;
+        align-items: center; justify-content: center;
+    }
+    .modal-box {
+        background: white; border-radius: 1rem; padding: 2rem;
+        width: 100%; max-width: 620px; max-height: 90vh;
+        overflow-y: auto; margin: 1rem;
+    }
+    .modal-header {
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 1.5rem;
+    }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-col-full { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; gap: .4rem; }
+    .form-label { font-size: .8rem; font-weight: 600; color: #374151; }
+    .form-input {
+        padding: .7rem .875rem; border: 1px solid #d1d5db;
+        border-radius: .5rem; font-size: .875rem; width: 100%;
+    }
+    .form-input:focus { outline: none; border-color: #1565C0; box-shadow: 0 0 0 3px rgba(21,101,192,.1); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#fee2e2;">🏥</div>
+        <div>
+            <div class="stat-value">{{ total_active }}</div>
+            <div class="stat-label">Activas ahora</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:#d1fae5;">✅</div>
+        <div>
+            <div class="stat-value">{{ total_count }}</div>
+            <div class="stat-label">En este filtro</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filters-bar">
+    <form method="GET" style="display:contents;">
+        <div class="filter-group">
+            <label class="filter-label">Estado</label>
+            <select name="status" class="filter-input">
+                <option value="active"    {% if status_filter == 'active' %}selected{% endif %}>Activas</option>
+                <option value="all"       {% if status_filter == 'all' %}selected{% endif %}>Todas</option>
+                <option value="discharged"{% if status_filter == 'discharged' %}selected{% endif %}>Alta médica</option>
+                <option value="transferred"{% if status_filter == 'transferred' %}selected{% endif %}>Transferidas</option>
+                <option value="deceased"  {% if status_filter == 'deceased' %}selected{% endif %}>Fallecidas</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Buscar</label>
+            <input type="text" name="search" class="filter-input"
+                   placeholder="Mascota, dueño, diagnóstico..." value="{{ search }}">
+        </div>
+        <div class="filter-group" style="flex:0;">
+            <label class="filter-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search"></i> Filtrar
+            </button>
+        </div>
+    </form>
+    <div style="margin-left:auto;">
+        <button onclick="document.getElementById('modalCrear').style.display='flex'"
+                class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva Hospitalización
+        </button>
+    </div>
+</div>
+
+<!-- Grid -->
+{% if hospitalizations %}
+<div class="hosp-grid">
+    {% for h in hospitalizations %}
+    <a href="{% url 'admin_dashboard:hospitalization_detail' h.pk %}"
+       class="hosp-card {{ h.status }}">
+        <div class="hosp-card-header">
+            <div class="pet-avatar">
+                {% if h.pet.photo %}
+                    <img src="{{ h.pet.photo.url }}" alt="{{ h.pet.name }}">
+                {% else %}
+                    {{ h.pet.get_emoji }}
+                {% endif %}
+            </div>
+            <div style="flex:1;">
+                <div class="pet-name">{{ h.pet.name }}</div>
+                <div class="pet-owner">
+                    <i class="bi bi-person"></i> {{ h.pet.owner.username }}
+                    &nbsp;·&nbsp; {{ h.pet.get_pet_type_display }}
+                </div>
+                <div style="margin-top:.4rem;">
+                    <span class="badge badge-{{ h.status }}">
+                        {{ h.get_status_display }}
+                    </span>
+                    &nbsp;
+                    <span class="status-badge status-{{ h.patient_status }}">
+                        {{ h.get_patient_status_display }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="hosp-card-body">
+            <div class="diagnosis-text">
+                <strong>Dx:</strong> {{ h.initial_diagnosis }}
+            </div>
+            <div class="meta-row">
+                <span class="meta-item">
+                    <i class="bi bi-calendar"></i>
+                    Ingreso: {{ h.admission_date|date:"d/m/Y H:i" }}
+                </span>
+                {% if h.veterinarian %}
+                <span class="meta-item">
+                    <i class="bi bi-person-badge"></i>
+                    Dr(a). {{ h.veterinarian.name }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="hosp-card-footer">
+            <span class="meta-item">
+                <i class="bi bi-activity"></i>
+                {{ h.monitoring_records.count }} registros de monitoreo
+            </span>
+            <span style="color:#1565C0; font-size:.8rem; font-weight:600;">
+                Ver expediente <i class="bi bi-arrow-right"></i>
+            </span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div style="background:white; border-radius:1rem; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-hospital"></i></div>
+        <h3 style="color:#374151; font-weight:700;">Sin hospitalizaciones</h3>
+        <p>No hay hospitalizaciones con los filtros seleccionados.</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Nueva Hospitalización -->
+<div id="modalCrear" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2 class="modal-title"><i class="bi bi-hospital"></i> Nueva Hospitalización</h2>
+            <button onclick="document.getElementById('modalCrear').style.display='none'"
+                    class="modal-close">✕</button>
+        </div>
+        <form method="POST" action="{% url 'admin_dashboard:create_hospitalization' %}">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Mascota *</label>
+                    <select name="pet" required class="form-input" id="petSelect" onchange="loadPetInfo(this)">
+                        <option value="">Seleccionar mascota...</option>
+                        {% for pet in pets %}
+                        <option value="{{ pet.id }}"
+                                data-owner="{{ pet.owner.username }}"
+                                data-type="{{ pet.get_pet_type_display }}"
+                                data-weight="{{ pet.weight }}">
+                            {{ pet.name }} — {{ pet.owner.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Veterinario responsable</label>
+                    <select name="veterinarian" class="form-input">
+                        <option value="">Sin asignar</option>
+                        {% for vet in veterinarians %}
+                        <option value="{{ vet.id }}">Dr(a). {{ vet.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha y hora de ingreso *</label>
+                    <input type="datetime-local" name="admission_date" required class="form-input"
+                           value="{{ now|date:'Y-m-d' }}T{{ now|time:'H:i' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Estado del paciente</label>
+                    <select name="patient_status" class="form-input">
+                        <option value="critical">Crítico</option>
+                        <option value="serious">Grave</option>
+                        <option value="stable" selected>Estable</option>
+                        <option value="improving">Mejorando</option>
+                        <option value="good">Bueno</option>
+                    </select>
+                </div>
+                <div class="form-group form-col-full">
+                    <label class="form-label">Motivo de hospitalización *</label>
+                    <textarea name="reason" required class="form-input" rows="2"
+                              placeholder="Describir el motivo de ingreso..."></textarea>
+                </div>
+                <div class="form-group form-col-full">
+                    <label class="form-label">Diagnóstico inicial *</label>
+                    <textarea name="initial_diagnosis" required class="form-input" rows="2"
+                              placeholder="Diagnóstico presuntivo inicial..."></textarea>
+                </div>
+                <div class="form-group form-col-full">
+                    <label class="form-label">Notas adicionales</label>
+                    <textarea name="notes" class="form-input" rows="2"
+                              placeholder="Observaciones iniciales..."></textarea>
+                </div>
+            </div>
+            <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+                <button type="button"
+                        onclick="document.getElementById('modalCrear').style.display='none'"
+                        class="btn" style="flex:1; background:white; border:2px solid #e5e7eb; color:#374151;">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" style="flex:2;">
+                    <i class="bi bi-plus-circle"></i> Crear Hospitalización
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadPetInfo(select) {
+    const opt = select.options[select.selectedIndex];
+    // Puedes usar opt.dataset.owner, opt.dataset.type, opt.dataset.weight
+    // para mostrar info de la mascota si agregas un div de preview
+}
+</script>
+{% endblock %}

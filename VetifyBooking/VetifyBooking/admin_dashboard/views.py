@@ -1042,3 +1042,152 @@ def edit_veterinarian_view(request, vet_id):
         'selected_services': list(vet.services.values_list('id', flat=True)),
     }
     return render(request, 'admin_dashboard/edit_veterinarian.html', context)
+
+from booking.models import Hospitalization, HospitalizationMonitoring, HospitalizationTreatment, HospitalizationOrder
+
+@admin_required
+def hospitalizations_view(request):
+    status_filter = request.GET.get('status', 'active')
+    search = request.GET.get('search', '')
+
+    hospitalizations = Hospitalization.objects.select_related('pet', 'veterinarian').order_by('-admission_date')
+
+    if status_filter != 'all':
+        hospitalizations = hospitalizations.filter(status=status_filter)
+
+    if search:
+        hospitalizations = hospitalizations.filter(
+            Q(pet__name__icontains=search) |
+            Q(pet__owner__username__icontains=search) |
+            Q(initial_diagnosis__icontains=search)
+        )
+
+    context = {
+        'hospitalizations': hospitalizations,
+        'status_filter': status_filter,
+        'search': search,
+        'total_active': Hospitalization.objects.filter(status='active').count(),
+        'total_count': hospitalizations.count(),
+        'pets': Pet.objects.select_related('owner').order_by('name'),
+        'veterinarians': Veterinarian.objects.filter(is_active=True),
+        'now': timezone.now(),
+    }
+    return render(request, 'admin_dashboard/hospitalizations.html', context)
+
+
+@admin_required
+def create_hospitalization_view(request):
+    if request.method == 'POST':
+        hosp = Hospitalization.objects.create(
+            pet_id=request.POST.get('pet'),
+            veterinarian_id=request.POST.get('veterinarian') or None,
+            reason=request.POST.get('reason'),
+            initial_diagnosis=request.POST.get('initial_diagnosis'),
+            admission_date=request.POST.get('admission_date'),
+            patient_status=request.POST.get('patient_status', 'stable'),
+            notes=request.POST.get('notes', ''),
+        )
+        # Crear orden médica vacía
+        HospitalizationOrder.objects.create(hospitalization=hosp)
+        messages.success(request, f'Hospitalización de {hosp.pet.name} creada.')
+        return redirect('admin_dashboard:hospitalization_detail', pk=hosp.pk)
+    return redirect('admin_dashboard:hospitalizations')
+
+
+@admin_required
+def hospitalization_detail_view(request, pk):
+    hosp = get_object_or_404(Hospitalization, pk=pk)
+    monitoring = hosp.monitoring_records.all()
+    treatments = hosp.treatments.all()
+    order, _ = HospitalizationOrder.objects.get_or_create(hospitalization=hosp)
+
+    context = {
+        'hosp': hosp,
+        'monitoring': monitoring,
+        'treatments': treatments,
+        'order': order,
+        'patient_status_choices': Hospitalization.PATIENT_STATUS_CHOICES,
+        'route_choices': HospitalizationTreatment.ROUTE_CHOICES,
+        'diet_choices': HospitalizationOrder.DIET_CHOICES,
+    }
+    return render(request, 'admin_dashboard/hospitalization_detail.html', context)
+
+
+@admin_required
+def discharge_hospitalization_view(request, pk):
+    hosp = get_object_or_404(Hospitalization, pk=pk)
+    if request.method == 'POST':
+        hosp.status = request.POST.get('status', 'discharged')
+        hosp.discharge_date = timezone.now()
+        hosp.notes = request.POST.get('discharge_notes', hosp.notes)
+        hosp.save()
+        messages.success(request, f'{hosp.pet.name} dado de alta.')
+    return redirect('admin_dashboard:hospitalizations')
+
+
+@admin_required
+def add_monitoring_view(request, pk):
+    hosp = get_object_or_404(Hospitalization, pk=pk)
+    if request.method == 'POST':
+        HospitalizationMonitoring.objects.create(
+            hospitalization=hosp,
+            temperature=request.POST.get('temperature') or None,
+            heart_rate=request.POST.get('heart_rate') or None,
+            respiratory_rate=request.POST.get('respiratory_rate') or None,
+            weight=request.POST.get('weight') or None,
+            general_status=request.POST.get('general_status', 'stable'),
+            observations=request.POST.get('observations', ''),
+            recorded_by=request.user,
+        )
+        # Actualizar estado general de la hospitalización
+        hosp.patient_status = request.POST.get('general_status', hosp.patient_status)
+        hosp.save()
+        messages.success(request, 'Registro de monitoreo agregado.')
+    return redirect('admin_dashboard:hospitalization_detail', pk=pk)
+
+
+@admin_required
+def add_treatment_view(request, pk):
+    hosp = get_object_or_404(Hospitalization, pk=pk)
+    if request.method == 'POST':
+        HospitalizationTreatment.objects.create(
+            hospitalization=hosp,
+            medication=request.POST.get('medication'),
+            dose=request.POST.get('dose'),
+            frequency=request.POST.get('frequency'),
+            route=request.POST.get('route', 'oral'),
+            notes=request.POST.get('notes', ''),
+        )
+        messages.success(request, 'Tratamiento agregado.')
+    return redirect('admin_dashboard:hospitalization_detail', pk=pk)
+
+
+@admin_required
+def update_treatment_status_view(request, pk, treatment_id):
+    treatment = get_object_or_404(HospitalizationTreatment, pk=treatment_id)
+    if request.method == 'POST':
+        treatment.status = request.POST.get('status', 'active')
+        treatment.save()
+        messages.success(request, 'Estado del tratamiento actualizado.')
+    return redirect('admin_dashboard:hospitalization_detail', pk=pk)
+
+
+@admin_required
+def update_order_view(request, pk):
+    hosp = get_object_or_404(Hospitalization, pk=pk)
+    order, _ = HospitalizationOrder.objects.get_or_create(hospitalization=hosp)
+    if request.method == 'POST':
+        order.fluid_therapy = 'fluid_therapy' in request.POST
+        order.fluid_therapy_detail = request.POST.get('fluid_therapy_detail', '')
+        order.diet = request.POST.get('diet', 'normal')
+        order.diet_notes = request.POST.get('diet_notes', '')
+        order.laboratory = 'laboratory' in request.POST
+        order.laboratory_detail = request.POST.get('laboratory_detail', '')
+        order.xray = 'xray' in request.POST
+        order.xray_detail = request.POST.get('xray_detail', '')
+        order.ultrasound = 'ultrasound' in request.POST
+        order.ultrasound_detail = request.POST.get('ultrasound_detail', '')
+        order.special_instructions = request.POST.get('special_instructions', '')
+        order.save()
+        messages.success(request, 'Orden médica actualizada.')
+    return redirect('admin_dashboard:hospitalization_detail', pk=pk)

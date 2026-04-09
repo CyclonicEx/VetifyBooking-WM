@@ -62,4 +62,14 @@ urlpatterns = [
     path('prescriptions/<int:prescription_id>/edit/', views.edit_prescription_view, name='edit_prescription'),
     path('prescriptions/<int:prescription_id>/delete/', views.delete_prescription_view, name='delete_prescription'),
 
+    # Hospitalización
+    path('hospitalizations/', views.hospitalizations_view, name='hospitalizations'),
+    path('hospitalizations/create/', views.create_hospitalization_view, name='create_hospitalization'),
+    path('hospitalizations/<int:pk>/', views.hospitalization_detail_view, name='hospitalization_detail'),
+    path('hospitalizations/<int:pk>/discharge/', views.discharge_hospitalization_view, name='discharge_hospitalization'),
+    path('hospitalizations/<int:pk>/monitoring/add/', views.add_monitoring_view, name='add_monitoring'),
+    path('hospitalizations/<int:pk>/treatment/add/', views.add_treatment_view, name='add_treatment'),
+    path('hospitalizations/<int:pk>/treatment/<int:treatment_id>/status/', views.update_treatment_status_view, name='update_treatment_status'),
+    path('hospitalizations/<int:pk>/order/', views.update_order_view, name='update_order'),
+
 ]

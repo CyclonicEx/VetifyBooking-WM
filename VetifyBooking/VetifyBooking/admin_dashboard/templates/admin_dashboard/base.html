@@ -104,6 +104,14 @@
                         </span>
                         <span class="sidebar-link-text">Consultas y Recetas</span>
                     </a>
+
+                    <a href="{% url 'admin_dashboard:hospitalizations' %}"
+                    class="sidebar-link {% if 'hospitalization' in request.resolver_match.url_name %}active{% endif %}">
+                        <span class="sidebar-link-icon">
+                            <i class="bi bi-hospital"></i>
+                        </span>
+                        <span class="sidebar-link-text">Hospitalizaciones</span>
+                    </a>
                 </div>
 
                 <!-- Sección: Configuración -->

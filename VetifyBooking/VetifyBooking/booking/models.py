@@ -464,3 +464,108 @@ class Vaccine(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.pet.name} ({self.date})"
+
+class Hospitalization(models.Model):
+    STATUS_CHOICES = [
+        ('active', 'Activa'),
+        ('discharged', 'Alta médica'),
+        ('transferred', 'Transferida'),
+        ('deceased', 'Fallecida'),
+    ]
+    PATIENT_STATUS_CHOICES = [
+        ('critical', 'Crítico'),
+        ('serious', 'Grave'),
+        ('stable', 'Estable'),
+        ('improving', 'Mejorando'),
+        ('good', 'Bueno'),
+    ]
+
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='hospitalizations')
+    veterinarian = models.ForeignKey(Veterinarian, on_delete=models.SET_NULL, null=True, related_name='hospitalizations')
+    reason = models.TextField(verbose_name='Motivo de hospitalización')
+    initial_diagnosis = models.TextField(verbose_name='Diagnóstico inicial')
+    admission_date = models.DateTimeField(verbose_name='Fecha y hora de ingreso')
+    discharge_date = models.DateTimeField(null=True, blank=True, verbose_name='Fecha y hora de alta')
+    patient_status = models.CharField(max_length=20, choices=PATIENT_STATUS_CHOICES, default='stable')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    notes = models.TextField(blank=True, verbose_name='Notas generales')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-admission_date']
+
+    def __str__(self):
+        return f'{self.pet.name} - {self.admission_date.strftime("%d/%m/%Y")}'
+
+
+class HospitalizationMonitoring(models.Model):
+    hospitalization = models.ForeignKey(Hospitalization, on_delete=models.CASCADE, related_name='monitoring_records')
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    temperature = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True, verbose_name='Temperatura (°C)')
+    heart_rate = models.IntegerField(null=True, blank=True, verbose_name='Frecuencia cardíaca (lpm)')
+    respiratory_rate = models.IntegerField(null=True, blank=True, verbose_name='Frecuencia respiratoria (rpm)')
+    weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name='Peso (kg)')
+    general_status = models.CharField(max_length=20, choices=Hospitalization.PATIENT_STATUS_CHOICES, default='stable')
+    observations = models.TextField(blank=True, verbose_name='Observaciones')
+    recorded_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-recorded_at']
+
+    def __str__(self):
+        return f'Monitoreo {self.hospitalization.pet.name} - {self.recorded_at.strftime("%d/%m/%Y %H:%M")}'
+
+
+class HospitalizationTreatment(models.Model):
+    ROUTE_CHOICES = [
+        ('oral', 'Oral'),
+        ('iv', 'Intravenosa'),
+        ('im', 'Intramuscular'),
+        ('sc', 'Subcutánea'),
+        ('topical', 'Tópica'),
+        ('other', 'Otra'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Activo'),
+        ('suspended', 'Suspendido'),
+        ('completed', 'Completado'),
+    ]
+
+    hospitalization = models.ForeignKey(Hospitalization, on_delete=models.CASCADE, related_name='treatments')
+    medication = models.CharField(max_length=200, verbose_name='Medicamento')
+    dose = models.CharField(max_length=100, verbose_name='Dosis')
+    frequency = models.CharField(max_length=100, verbose_name='Frecuencia')
+    route = models.CharField(max_length=20, choices=ROUTE_CHOICES, default='oral')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    start_date = models.DateField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f'{self.medication} - {self.hospitalization.pet.name}'
+
+
+class HospitalizationOrder(models.Model):
+    DIET_CHOICES = [
+        ('normal', 'Normal'),
+        ('soft', 'Blanda'),
+        ('liquid', 'Líquida'),
+        ('fasting', 'Ayuno'),
+        ('special', 'Especial'),
+    ]
+
+    hospitalization = models.OneToOneField(Hospitalization, on_delete=models.CASCADE, related_name='medical_order')
+    fluid_therapy = models.BooleanField(default=False, verbose_name='Fluidoterapia')
+    fluid_therapy_detail = models.CharField(max_length=200, blank=True, verbose_name='Detalle fluidoterapia')
+    diet = models.CharField(max_length=20, choices=DIET_CHOICES, default='normal')
+    diet_notes = models.TextField(blank=True, verbose_name='Notas de dieta')
+    laboratory = models.BooleanField(default=False, verbose_name='Laboratorio')
+    laboratory_detail = models.TextField(blank=True)
+    xray = models.BooleanField(default=False, verbose_name='Rayos X')
+    xray_detail = models.CharField(max_length=200, blank=True)
+    ultrasound = models.BooleanField(default=False, verbose_name='Ultrasonido')
+    ultrasound_detail = models.CharField(max_length=200, blank=True)
+    special_instructions = models.TextField(blank=True, verbose_name='Indicaciones especiales')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Orden médica - {self.hospitalization.pet.name}'

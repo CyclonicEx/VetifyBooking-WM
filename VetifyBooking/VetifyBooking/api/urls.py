@@ -41,4 +41,6 @@ urlpatterns = [
     path('citas/<int:pk>/detalle/', views.cita_detalle_completo, name='cita-detalle-completo'),
     path('historial-medico/', views.historial_medico, name='historial-medico'),
     path('profile/avatar/', views.update_avatar, name='update-avatar'),
+    path('hospitalizaciones/', views.hospitalizaciones_lista),
+    path('hospitalizaciones/<int:pk>/', views.hospitalizacion_detalle),
 ]
