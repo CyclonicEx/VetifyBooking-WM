@@ -12,7 +12,6 @@ dependencies:
     sdk: flutter
   http: ^0.13.6
 
-  # ── Ya tenías estas ──────────────────────────
   provider: ^6.0.5
   image_picker: ^1.0.4
   sqflite: ^2.3.2
@@ -24,7 +23,7 @@ dependencies:
   url_launcher: ^6.2.5       # RF13 – llamar, WhatsApp, email
   pdf: ^3.10.8               # RF14 – generar PDF del comprobante
   path_provider: ^2.1.2      # RF14 – guardar PDF en el dispositivo
-  open_file: ^3.3.2  
+  open_file: ^3.3.2
   share_plus: ^7.2.2
   shared_preferences: ^2.2.3
 
@@ -46,3 +45,11 @@ flutter:
     - assets/logo.png
     - assets/vet.jpg
     - assets/cd.png
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Bold.ttf
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

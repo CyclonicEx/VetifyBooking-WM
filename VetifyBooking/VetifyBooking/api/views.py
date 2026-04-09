@@ -6,6 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
+from django.http import HttpResponse
+import json
 
 from booking.models import (
     Appointment, Pet, Service, Veterinarian,
@@ -101,6 +103,9 @@ def api_register(request):
 def mi_cuenta(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == 'GET':
+        avatar_url = None
+        if profile.avatar:
+            avatar_url = request.build_absolute_uri(profile.avatar.url)
         return Response({
             'profile_id': profile.pk,
             'username': request.user.username,
@@ -108,6 +113,7 @@ def mi_cuenta(request):
             'email': request.user.email or '',
             'phone': profile.phone or '',
             'address': profile.address or '',
+            'avatar': avatar_url,
         })
     first_name = (request.data.get('first_name') or '').strip()
     email = (request.data.get('email') or '').strip()
@@ -237,9 +243,28 @@ def vets_por_servicio(request, service_id):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def horarios_lista(request):
-    horarios = ClinicSchedule.objects.all()
-    return Response(ClinicScheduleSerializer(horarios, many=True).data)
-
+    DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    horarios = list(ClinicSchedule.objects.all())
+    horarios.sort(key=lambda s: DAY_ORDER.index(s.day_of_week) if s.day_of_week in DAY_ORDER else 99)
+    
+    data = []
+    for h in horarios:
+        data.append({
+            'id': h.id,
+            'day_of_week': h.day_of_week,
+            'get_day_of_week_display': h.get_day_of_week_display(),
+            'is_open': h.is_open,
+            'opening_time': str(h.opening_time) if h.opening_time else None,
+            'closing_time': str(h.closing_time) if h.closing_time else None,
+            'notes': h.notes or '',
+        })
+    
+    from django.http import JsonResponse
+    import json
+    return HttpResponse(
+        json.dumps(data, ensure_ascii=False),
+        content_type='application/json; charset=utf-8'
+    )
 
 # ── AVAILABLE SLOTS ──────────────────────────────────────────────
 

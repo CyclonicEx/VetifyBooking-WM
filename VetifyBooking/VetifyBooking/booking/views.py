@@ -111,12 +111,12 @@ def booking_view(request):
 
 @login_required
 def appointments_view(request):
-    appointments = Appointment.objects.filter(user=request.user)
-    return render(
-        request,
-        'booking/appointments.html',
-        {'appointments': appointments}
-    )
+    appointments = Appointment.objects.filter(
+        user=request.user
+    ).exclude(
+        status__in=['completed', 'cancelled']
+    ).order_by('date', 'time')
+    return render(request, 'booking/appointments.html', {'appointments': appointments})
 
 @login_required
 def delete_appointment(request, appointment_id):

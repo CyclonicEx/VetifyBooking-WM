@@ -13,6 +13,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:open_file/open_file.dart';
+import 'package:flutter/services.dart';
 
 // ════════════════════════════════════════════════════════════════
 //  API SERVICE
@@ -61,6 +63,7 @@ class ApiService {
   static void logout() {
     _token = null;
     _userId = null;
+    borrarSesion();
   }
 
   // ── AUTH ─────────────────────────────────────────
@@ -81,6 +84,7 @@ class ApiService {
         final data = json.decode(res.body);
         _token = data['token'];
         _userId = data['user_id'];
+        await guardarSesion();
         return null;
       }
       try {
@@ -316,21 +320,17 @@ class ApiService {
     }
   }
 
-  static Future<String?> updateAvatar(String imagePath) async {
+  static Future<void> updateAvatar(String imagePath) async {
     final uri = Uri.parse('$baseUrl/profile/avatar/');
     final request = http.MultipartRequest('POST', uri);
-
-    request.headers.addAll(_headers);
+    request.headers['Authorization'] = 'Token $_token'; // solo este header
     request.files.add(await http.MultipartFile.fromPath('avatar', imagePath));
-
-    final res = await request.send();
-    final body = await res.stream.bytesToString();
-
-    if (res.statusCode == 200) {
-      final data = json.decode(body);
-      return data['avatar'];
-    } else {
-      throw Exception('Error updating avatar: ${res.statusCode}');
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
+    print('AVATAR STATUS: ${res.statusCode}');
+    print('AVATAR BODY: ${res.body}');
+    if (res.statusCode != 200) {
+      throw Exception('Error updating avatar: ${res.statusCode} ${res.body}');
     }
   }
 
@@ -361,6 +361,30 @@ class ApiService {
       return json.decode(res.body) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
+  }
+
+  static Future<void> guardarSesion() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', _token ?? '');
+    await prefs.setInt('user_id', _userId ?? 0);
+  }
+
+  static Future<bool> cargarSesion() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final userId = prefs.getInt('user_id') ?? 0;
+    if (token.isNotEmpty) {
+      _token = token;
+      _userId = userId;
+      return true;
+    }
+    return false;
+  }
+
+  static Future<void> borrarSesion() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('user_id');
   }
 }
 
@@ -426,51 +450,68 @@ class Veterinario {
 class Mascota {
   final int id;
   String nombre, especie, raza, color;
-  int edad;
+  DateTime? fechaNacimiento;
   double peso;
   String? foto;
-  /// updated | pending | none (RF-12 vacunas)
   String estadoVacunacion;
   String notasVacunas;
 
   Mascota({
-    required this.id,
-    required this.nombre,
-    required this.especie,
-    required this.raza,
-    required this.edad,
-    required this.peso,
-    required this.color,
+    required this.id, required this.nombre,
+    required this.especie, required this.raza,
+    required this.peso, required this.color,
+    this.fechaNacimiento,
     this.foto,
     this.estadoVacunacion = 'updated',
     this.notasVacunas = '',
   });
 
-  factory Mascota.fromJson(Map<String, dynamic> j) => Mascota(
-        id: j['id'],
-        nombre: j['name'] ?? '',
-        especie: j['pet_type'] ?? 'dog',
-        raza: j['breed'] ?? '',
-        edad: _calcularEdad(j['date_of_birth']),
-        peso: double.tryParse(j['weight'].toString()) ?? 0,
-        color: j['color'] ?? '',
-        foto: j['photo'],
-        estadoVacunacion: j['vaccination_status'] ?? 'updated',
-        notasVacunas: j['allergies'] ?? '',
-      );
+  // Edad calculada desde fechaNacimiento
+  int get edad {
+    if (fechaNacimiento == null) return 0;
+    final hoy = DateTime.now();
+    int e = hoy.year - fechaNacimiento!.year;
+    if (hoy.month < fechaNacimiento!.month ||
+        (hoy.month == fechaNacimiento!.month && hoy.day < fechaNacimiento!.day)) {
+      e--;
+    }
+    return e;
+  }
 
-  static int _calcularEdad(String? dob) {
-    if (dob == null || dob.isEmpty) return 0;
-    try {
-      final fecha = DateTime.parse(dob);
-      final hoy = DateTime.now();
-      int edad = hoy.year - fecha.year;
-      if (hoy.month < fecha.month ||
-          (hoy.month == fecha.month && hoy.day < fecha.day)) {
-        edad--;
-      }
-      return edad;
-    } catch (_) { return 0; }
+  factory Mascota.fromJson(Map<String, dynamic> j) => Mascota(
+    id: j['id'],
+    nombre: j['name'] ?? '',
+    especie: j['pet_type'] ?? 'dog',
+    raza: j['breed'] ?? '',
+    fechaNacimiento: j['date_of_birth'] != null
+        ? DateTime.tryParse(j['date_of_birth'])
+        : null,
+    peso: double.tryParse(j['weight'].toString()) ?? 0,
+    color: j['color'] ?? '',
+    foto: j['photo'],
+    estadoVacunacion: j['vaccination_status'] ?? 'updated',
+    notasVacunas: j['allergies'] ?? '',
+  );
+
+  Map<String, dynamic> toJson() => {
+    'name': nombre,
+    'pet_type': especie,
+    'breed': raza,
+    'date_of_birth': fechaNacimiento != null
+        ? '${fechaNacimiento!.year}-${fechaNacimiento!.month.toString().padLeft(2,'0')}-${fechaNacimiento!.day.toString().padLeft(2,'0')}'
+        : null,
+    'weight': peso,
+    'color': color,
+    'vaccination_status': estadoVacunacion,
+    'allergies': notasVacunas,
+  };
+
+  String? get fotoUrlAbsoluta {
+    final p = foto;
+    if (p == null || p.isEmpty) return null;
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    final o = ApiService.serverOrigin;
+    return p.startsWith('/') ? '$o$p' : '$o/$p';
   }
 
   String get especieDisplay {
@@ -485,32 +526,6 @@ class Mascota {
       'none': 'Sin vacunas registradas',
     };
     return m[estadoVacunacion] ?? estadoVacunacion;
-  }
-
-  /// URL completa para mostrar la foto desde el servidor Django.
-  String? get fotoUrlAbsoluta {
-    final p = foto;
-    if (p == null || p.isEmpty) return null;
-    if (p.startsWith('http://') || p.startsWith('https://')) return p;
-    final o = ApiService.serverOrigin;
-    return p.startsWith('/') ? '$o$p' : '$o/$p';
-  }
-
-  Map<String, dynamic> toJson() => {
-    'name': nombre,
-    'pet_type': especie,
-    'breed': raza,
-    'date_of_birth': _edadAFecha(edad),  // ← convierte edad a fecha
-    'weight': peso,
-    'color': color,
-    'vaccination_status': estadoVacunacion,
-    'allergies': notasVacunas,
-  };
-
-  static String _edadAFecha(int edad) {
-    final hoy = DateTime.now();
-    final nacimiento = DateTime(hoy.year - edad, hoy.month, hoy.day);
-    return '${nacimiento.year}-${nacimiento.month.toString().padLeft(2,'0')}-${nacimiento.day.toString().padLeft(2,'0')}';
   }
 }
 
@@ -842,8 +857,12 @@ class AppProvider with ChangeNotifier {
       u.telefono = me['phone'] as String? ?? u.telefono;
       u.direccion = me['address'] as String? ?? u.direccion;
       final pid = me['profile_id'];
-      u.perfilId =
-          pid is int ? pid : (pid is num ? pid.toInt() : null);
+      u.perfilId = pid is int ? pid : (pid is num ? pid.toInt() : null);
+
+      final avatar = me['avatar'] as String?;
+      if (avatar != null && avatar.isNotEmpty) {
+        u.foto = avatar;
+      }
     } catch (e) {
       debugPrint('sync perfil: $e');
     }
@@ -940,16 +959,16 @@ class AppProvider with ChangeNotifier {
 
   Future<String?> editarMascota(
     int id,
-    String nombre,
-    String especie,
-    String raza,
-    int edad,
-    double peso,
-    String color, {
+    String nombre, String especie, String raza,
+    DateTime? fechaNacimiento, // ← reemplaza int edad
+    double peso, String color, {
     String estadoVac = 'updated',
     String notasVac = '',
     String? photoPath,
   }) async {
+    final fechaStr = fechaNacimiento != null
+        ? '${fechaNacimiento.year}-${fechaNacimiento.month.toString().padLeft(2,'0')}-${fechaNacimiento.day.toString().padLeft(2,'0')}'
+        : null;
     try {
       final data = await ApiService.editarMascota(
         id,
@@ -957,7 +976,7 @@ class AppProvider with ChangeNotifier {
           'name': nombre,
           'pet_type': especie,
           'breed': raza,
-          'age': edad,
+          if (fechaStr != null) 'date_of_birth': fechaStr,
           'weight': peso,
           'color': color,
           'vaccination_status': estadoVac,
@@ -966,9 +985,7 @@ class AppProvider with ChangeNotifier {
         photoPath: photoPath,
       );
       final i = mascotas.indexWhere((m) => m.id == id);
-      if (i != -1) {
-        mascotas[i] = Mascota.fromJson(data);
-      }
+      if (i != -1) mascotas[i] = Mascota.fromJson(data);
       notifyListeners();
       return null;
     } catch (e) {
@@ -1114,9 +1131,22 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _check() async {
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    if (ApiService.estaLogueado) {
+
+    final tieneSesion = await ApiService.cargarSesion();
+
+    if (tieneSesion) {
       final app = Provider.of<AppProvider>(context, listen: false);
-      await app.cargarTodo();
+      
+      // Crear usuario temporal para que no sea null
+      app.usuarioActual = Usuario(
+        id: ApiService.userId ?? 0,
+        nombre: 'Cargando...',
+        username: '',
+        email: '',
+      );
+      
+      await app.cargarTodo(); // syncPerfilDesdeApi actualiza el nombre y email
+      
       if (!mounted) return;
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (_) => const HomeScreen()));
@@ -1542,7 +1572,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // mascota form
   final _mNom = TextEditingController();
   final _mRaz = TextEditingController();
-  final _mEda = TextEditingController();
+  DateTime? _mFechaNac;
   final _mPes = TextEditingController();
   final _mCol = TextEditingController();
   final _mVacNotas = TextEditingController();
@@ -1592,7 +1622,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
-    for (final c in [_mNom, _mRaz, _mEda, _mPes, _mCol, _mVacNotas]) {
+    for (final c in [_mNom, _mRaz, _mPes, _mCol, _mVacNotas]) {
       c.dispose();
     }
     super.dispose();
@@ -1622,7 +1652,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 border: Border.all(color: Colors.white, width: 2),
                 color: Colors.white.withOpacity(0.2),
               ),
-              child: const Icon(Icons.person, color: Colors.white, size: 20),
+              child: ClipOval(
+                child: u?.foto != null && u!.foto!.isNotEmpty
+                    ? Image.network(
+                        u.foto!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white, size: 20),
+                      )
+                    : const Icon(Icons.person, color: Colors.white, size: 20),
+              ),
             ),
             const SizedBox(width: 10),
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2597,16 +2635,17 @@ Color _colorEstado(String estado) {
       initialChildSize: 0.9,
       maxChildSize: 0.95,
       minChildSize: 0.5,
-      builder: (_, ctrl) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SingleChildScrollView(
-          controller: ctrl,
-          padding: const EdgeInsets.all(20),
-          child: Column(children: [
-            Container(width: 40, height: 4,
+      builder: (_, ctrl) => StatefulBuilder( // ← agrega esto
+        builder: (context, setSheetState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            controller: ctrl,
+            padding: const EdgeInsets.all(20),
+            child: Column(children: [
+              Container(width: 40, height: 4,
                 decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             _registroMascotaHeader(),
@@ -2631,10 +2670,56 @@ Color _colorEstado(String estado) {
                 const SizedBox(height: 12),
                 _tf(_mRaz, 'Raza', Icons.info_outline_rounded),
                 const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: _tf(_mEda, 'Edad (años)', Icons.cake_rounded)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _tf(_mPes, 'Peso (kg)', Icons.monitor_weight_rounded)),
+                Column(children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _mFechaNac ?? DateTime.now().subtract(const Duration(days: 365)),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                        helpText: 'Fecha de nacimiento',
+                      );
+                      if (picked != null) {
+                        setState(() => _mFechaNac = picked);       // actualiza HomeScreen
+                        setSheetState(() => _mFechaNac = picked);  // actualiza el sheet
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: Row(children: [
+                        Icon(Icons.cake_rounded, color: kPrimary, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _mFechaNac != null
+                                ? '${_mFechaNac!.day}/${_mFechaNac!.month}/${_mFechaNac!.year}'
+                                : 'Fecha de nacimiento (opcional)',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: _mFechaNac != null ? Colors.black87 : Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                        if (_mFechaNac != null)
+                          GestureDetector(
+                            onTap: () {
+                              setState(() => _mFechaNac = null);
+                              setSheetState(() => _mFechaNac = null);
+                            },
+                            child: Icon(Icons.clear, color: Colors.grey.shade400, size: 18),
+                          ),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _tf(_mPes, 'Peso (kg)', Icons.monitor_weight_rounded),
                 ]),
                 const SizedBox(height: 12),
                 _tf(_mCol, 'Color', Icons.palette_outlined),
@@ -2648,21 +2733,26 @@ Color _colorEstado(String estado) {
                   child: FilledButton.icon(
                     onPressed: () async {
                       if (_mNom.text.isEmpty) { _snack(context, 'El nombre es obligatorio'); return; }
-                      final edad = int.tryParse(_mEda.text);
                       final peso = double.tryParse(_mPes.text.replaceAll(',', '.'));
-                      if (edad == null || edad < 0) { _snack(context, 'Edad inválida'); return; }
                       if (peso == null || peso <= 0) { _snack(context, 'Peso inválido'); return; }
                       final err = await app.agregarMascota(
-                        Mascota(id: 0, nombre: _mNom.text.trim(), especie: _mEsp,
-                            raza: _mRaz.text.trim(), edad: edad, peso: peso,
-                            color: _mCol.text.trim(), estadoVacunacion: _mVacEst,
-                            notasVacunas: _mVacNotas.text.trim()),
+                        Mascota(
+                          id: 0,
+                          nombre: _mNom.text.trim(),
+                          especie: _mEsp,
+                          raza: _mRaz.text.trim(),
+                          fechaNacimiento: _mFechaNac,
+                          peso: peso,
+                          color: _mCol.text.trim(),
+                          estadoVacunacion: _mVacEst,
+                          notasVacunas: _mVacNotas.text.trim(),
+                        ),
                         photoPath: _mFotoPath,
                       );
                       if (!context.mounted) return;
                       if (err != null) { _snack(context, err); return; }
-                      for (final c in [_mNom, _mRaz, _mEda, _mPes, _mCol, _mVacNotas]) c.clear();
-                      setState(() { _mEsp = 'dog'; _mVacEst = 'updated'; _mFotoPath = null; });
+                      for (final c in [_mNom, _mRaz, _mPes, _mCol, _mVacNotas]) c.clear();
+                      setState(() { _mEsp = 'dog'; _mVacEst = 'updated'; _mFotoPath = null; _mFechaNac = null; });
                       Navigator.pop(context);
                       _snack(context, 'Mascota guardada');
                     },
@@ -2678,7 +2768,7 @@ Color _colorEstado(String estado) {
           ]),
         ),
       ),
-    );
+    ));
   }
 
   Widget _avatarMascota(Mascota m, {double size = 52}) {
@@ -2922,7 +3012,7 @@ Color _colorEstado(String estado) {
   void _dlgEditarMascota(AppProvider app, Mascota m) {
     final nom = TextEditingController(text: m.nombre);
     final raz = TextEditingController(text: m.raza);
-    final eda = TextEditingController(text: '${m.edad}');
+    DateTime? fechaNac = m.fechaNacimiento;
     final pes = TextEditingController(text: '${m.peso}');
     final col = TextEditingController(text: m.color);
     final vacN = TextEditingController(text: m.notasVacunas);
@@ -3060,12 +3150,35 @@ Color _colorEstado(String estado) {
                       border: OutlineInputBorder(),
                     ),
                   ),
-                  TextField(
-                    controller: eda,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Edad (años)',
-                      border: OutlineInputBorder(),
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: fechaNac ?? DateTime.now().subtract(const Duration(days: 365)),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setSt(() => fechaNac = picked);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.cake_rounded, color: kPrimary, size: 18),
+                        const SizedBox(width: 8),
+                        Text( 
+                          fechaNac != null
+                              ? '${fechaNac!.day}/${fechaNac!.month}/${fechaNac!.year}'
+                              : 'Fecha de nacimiento',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: fechaNac != null ? Colors.black87 : Colors.grey,
+                          ),
+                        ),
+                      ]),
                     ),
                   ),
                   TextField(
@@ -3134,7 +3247,6 @@ Color _colorEstado(String estado) {
               onPressed: () {
                 nom.dispose();
                 raz.dispose();
-                eda.dispose();
                 pes.dispose();
                 col.dispose();
                 vacN.dispose();
@@ -3144,21 +3256,16 @@ Color _colorEstado(String estado) {
             ),
             FilledButton.icon(
               onPressed: () async {
-                final ed = int.tryParse(eda.text);
-                final pe =
-                    double.tryParse(pes.text.replaceAll(',', '.'));
-                if (ed == null || ed < 0 || pe == null || pe <= 0) {
-                  _snack(ctx, 'Edad y peso deben ser válidos');
+                final pe = double.tryParse(pes.text.replaceAll(',', '.'));
+                if (pe == null || pe <= 0) {
+                  _snack(ctx, 'Peso debe ser válido');
                   return;
                 }
                 final err = await app.editarMascota(
                   m.id,
-                  nom.text.trim(),
-                  esp,
-                  raz.text.trim(),
-                  ed,
-                  pe,
-                  col.text.trim(),
+                  nom.text.trim(), esp, raz.text.trim(),
+                  fechaNac,
+                  pe, col.text.trim(),
                   estadoVac: vacE,
                   notasVac: vacN.text.trim(),
                   photoPath: fotoNueva,
@@ -3166,7 +3273,6 @@ Color _colorEstado(String estado) {
                 if (!ctx.mounted) return;
                 nom.dispose();
                 raz.dispose();
-                eda.dispose();
                 pes.dispose();
                 col.dispose();
                 vacN.dispose();
@@ -3298,6 +3404,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
   late final TextEditingController _pEma;
   late final TextEditingController _pTel;
   late final TextEditingController _pDir;
+  String? _fotoLocal;
 
   @override
   void initState() {
@@ -3334,18 +3441,12 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final pickedFile = await picker.pickImage(source: source, imageQuality: 80);
     if (pickedFile != null) {
       try {
-        final newAvatarUrl = await ApiService.updateAvatar(pickedFile.path);
-
-        await widget.app.syncPerfilDesdeApi(); // 🔥 IMPORTANTE
-
+        await ApiService.updateAvatar(pickedFile.path);
         if (!mounted) return;
-
         setState(() {
-          if (newAvatarUrl != null) {
-            widget.app.usuarioActual?.foto = newAvatarUrl;
-          }
+          _fotoLocal = pickedFile.path;
+          widget.app.usuarioActual?.foto = pickedFile.path;
         });
-
         _snack(context, 'Foto de perfil actualizada');
       } catch (e) {
         if (!mounted) return;
@@ -3418,19 +3519,30 @@ class _PerfilScreenState extends State<PerfilScreen> {
             child: Column(children: [
               GestureDetector(
                 onTap: _showImageSourceDialog,
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: const Color(0xFFE3F2FD),
-                  backgroundImage: u?.foto != null && u!.foto!.isNotEmpty
-                      ? (u.foto!.startsWith('http') || u.foto!.startsWith('/')
-                          ? NetworkImage(
-                              '${ApiService.serverOrigin}${u.foto!}?t=${DateTime.now().millisecondsSinceEpoch}'
-                            )
-                          : FileImage(File(u.foto!)) as ImageProvider)
-                      : null,
-                  child: (u?.foto == null || u!.foto!.isEmpty)
-                      ? const Icon(Icons.person, size: 50, color: kPrimary)
-                      : null,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 52,
+                      backgroundColor: const Color(0xFFE3F2FD),
+                      backgroundImage: _fotoLocal != null
+                          ? FileImage(File(_fotoLocal!)) as ImageProvider
+                          : (u?.foto != null && u!.foto!.isNotEmpty
+                              ? NetworkImage(u!.foto!) as ImageProvider
+                              : null),
+                      child: (_fotoLocal == null && (u?.foto == null || u!.foto!.isEmpty))
+                          ? const Icon(Icons.person, size: 50, color: kPrimary)
+                          : null,
+                    ),
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                            color: kPrimary, shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -3763,12 +3875,26 @@ class _ExpedienteScreenState extends State<ExpedienteScreen> {
     try {
       final app   = widget.app;
       final u     = app.usuarioActual;
-      final pdf   = pw.Document();
       final ahora = DateTime.now();
+
+      // Cargar fuentes Roboto con soporte UTF-8
+      final fontData     = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+      final fontBoldData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+      final ttf          = pw.Font.ttf(fontData);
+      final ttfBold      = pw.Font.ttf(fontBoldData);
+
+      final pdf = pw.Document();
+
+      // Tema global con Roboto
+      final theme = pw.ThemeData.withFont(
+        base: ttf,
+        bold: ttfBold,
+      );
 
       pdf.addPage(pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(36),
+        theme: theme,  // ← aquí aplica la fuente
         header: (_) => pw.Container(
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(
@@ -3900,15 +4026,18 @@ class _ExpedienteScreenState extends State<ExpedienteScreen> {
         ],
       ));
 
-      final dir  = await getApplicationDocumentsDirectory();
-      final path =
-          '${dir.path}/expediente_${ahora.millisecondsSinceEpoch}.pdf';
+      // Reemplaza la parte final del método:
+      final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
+      final path = '${dir.path}/expediente_${ahora.millisecondsSinceEpoch}.pdf';
       final file = File(path);
       await file.writeAsBytes(await pdf.save());
+
       if (!mounted) return;
       setState(() => _generando = false);
-      await Share.shareXFiles([XFile(path)],
-          text: 'Expediente Clínico');
+
+      // Abrir el PDF directamente
+      await OpenFile.open(path);
+      _snack(context, 'PDF guardado en: $path');
     } catch (e) {
       if (!mounted) return;
       setState(() => _generando = false);

@@ -6,14 +6,13 @@
 {% block content %}
 <div style="max-width:1100px; margin:0 auto; padding:2rem;">
 
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#38bdf8,#0284c7); border-radius:1.5rem; padding:2.5rem 2rem; color:white; margin-bottom:2rem; box-shadow:0 8px 20px rgba(56,189,248,0.3);">
-        <h1 style="font-size:2rem; font-weight:700; margin-bottom:0.5rem;">
-            <i class="bi bi-file-medical"></i> Historial Médico
-        </h1>
-        <p style="opacity:0.9; font-size:1.125rem;">
-            Registro completo de citas, consultas y recetas de tus mascotas
-        </p>
+
+    <div style="background:linear-gradient(90deg,#1565C0,#1976D2); border-radius:1rem; padding:1.5rem 2rem; color:white; margin-bottom:2rem; display:flex; align-items:center; gap:1rem;">
+        <i class="bi bi-file-medical" style="font-size:1.75rem;"></i>
+        <div>
+            <h1 style="font-size:1.5rem; font-weight:700; margin:0;">Historial Médico</h1>
+            <p style="opacity:0.85; font-size:0.875rem; margin:0;">Registro completo de citas, consultas y recetas</p>
+        </div>
     </div>
 
     {% if appointments %}

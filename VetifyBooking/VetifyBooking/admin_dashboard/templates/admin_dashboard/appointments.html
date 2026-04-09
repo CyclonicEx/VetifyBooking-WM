@@ -56,6 +56,7 @@
             <div class="filter-group">
                 <label class="filter-label">Estado</label>
                 <select name="status" class="filter-input">
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Activas (sin completadas)</option>
                     <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todas</option>
                     <option value="today" {% if status_filter == 'today' %}selected{% endif %}>Hoy</option>
                     <option value="upcoming" {% if status_filter == 'upcoming' %}selected{% endif %}>Próximas</option>

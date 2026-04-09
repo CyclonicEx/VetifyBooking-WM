@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from datetime import date
 
 
 # =========================
@@ -50,6 +51,20 @@ class Pet(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def age(self):
+        if not self.date_of_birth:
+            return 0
+        hoy = date.today()
+        edad = hoy.year - self.date_of_birth.year
+        if (hoy.month, hoy.day) < (self.date_of_birth.month, self.date_of_birth.day):
+            edad -= 1
+        return edad
+    
+    def get_emoji(self):
+        emojis = {'dog': '🐕', 'cat': '🐈', 'other': '🐰'}
+        return emojis.get(self.pet_type, '🐾')
 
     class Meta:
         verbose_name = "Mascota"

@@ -94,7 +94,7 @@ def dashboard_view(request):
 
 @admin_required
 def appointments_view(request):
-    status_filter = request.GET.get('status', 'active')  # Cambia default a 'active'
+    status_filter = request.GET.get('status', 'active')
     date_filter = request.GET.get('date', '')
     search = request.GET.get('search', '')
 
@@ -187,8 +187,10 @@ def users_view(request):
     # Agregar estadísticas por usuario
     users_data = []
     for user in users:
+        profile = UserProfile.objects.filter(user=user).first()
         users_data.append({
             'user': user,
+            'profile': profile,
             'pets_count': Pet.objects.filter(owner=user).count(),
             'appointments_count': Appointment.objects.filter(user=user).count(),
         })
@@ -303,8 +305,13 @@ def services_view(request):
 
 @admin_required
 def schedules_view(request):
-    clinic_schedules = ClinicSchedule.objects.all().order_by('day_of_week')
-    open_days = clinic_schedules.filter(is_open=True).count()
+    DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    all_schedules = ClinicSchedule.objects.all()
+    clinic_schedules = sorted(
+        all_schedules,
+        key=lambda s: DAY_ORDER.index(s.day_of_week) if s.day_of_week in DAY_ORDER else 99
+    )
+    open_days = sum(1 for s in clinic_schedules if s.is_open)
     context = {
         'clinic_schedules': clinic_schedules,
         'open_days': open_days,
@@ -913,6 +920,7 @@ from booking.models import UserProfile
 
 @admin_required
 def admin_profile_view(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
     if request.method == 'POST':
         request.user.first_name = request.POST.get('first_name', '')
         request.user.last_name = request.POST.get('last_name', '')
@@ -933,7 +941,9 @@ def admin_profile_view(request):
         messages.success(request, 'Perfil actualizado exitosamente.')
         return redirect('admin_dashboard:admin_profile')
 
-    return render(request, 'admin_dashboard/admin_profile.html')
+    return render(request, 'admin_dashboard/admin_profile.html', {
+        'profile': profile,
+    })
 
 
 @admin_required
