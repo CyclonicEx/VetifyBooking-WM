@@ -309,15 +309,24 @@
 
             {% if top_users %}
                 <div class="rank-list">
-                    {% for user in top_users %}
-                        <div class="rank-item">
-                            <div class="rank-number">{{ forloop.counter }}</div>
-                            <div class="rank-info">
-                                <div class="rank-name">{{ user.username }}</div>
-                                <div class="rank-email">{{ user.email }}</div>
-                            </div>
-                            <div class="rank-value">{{ user.appointments_count }}</div>
+                    {% for item in top_users %}
+                    <div class="rank-item">
+                        <div class="rank-number">{{ forloop.counter }}</div>
+                        <div style="width:36px; height:36px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#dbeafe; display:flex; align-items:center; justify-content:center;">
+                            {% if item.profile and item.profile.avatar %}
+                                <img src="{{ item.profile.avatar.url }}" style="width:100%; height:100%; object-fit:cover;">
+                            {% else %}
+                                <span style="font-size:0.875rem; font-weight:700; color:#1565C0;">
+                                    {{ item.user.username.0|upper }}
+                                </span>
+                            {% endif %}
                         </div>
+                        <div class="rank-info">
+                            <div class="rank-name">{{ item.user.username }}</div>
+                            <div class="rank-email">{{ item.user.email }}</div>
+                        </div>
+                        <div class="rank-value">{{ item.appointments_count }}</div>
+                    </div>
                     {% endfor %}
                 </div>
             {% else %}
@@ -335,7 +344,9 @@
             <div class="rank-list">
                 {% for service in service_stats %}
                     <div class="rank-item">
-                        <div style="font-size:1.5rem;">{{ service.icon }}</div>
+                        <div style="font-size:1.5rem; color:#1565C0;">
+                            <i class="{{ service.icon }}"></i>
+                        </div>
                         <div class="rank-info">
                             <div class="rank-name">{{ service.name }}</div>
                             <div class="rank-email">

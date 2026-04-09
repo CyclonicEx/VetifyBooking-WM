@@ -9,6 +9,7 @@ from booking.models import Appointment, Pet, Service, Veterinarian, ClinicSchedu
 from .decorators import admin_required
 import json
 from django.contrib.auth import update_session_auth_hash
+from booking.models import UserProfile
 
 
 from django.contrib.auth import authenticate, login
@@ -367,9 +368,18 @@ def reports_view(request):
         })
     
     # Top 5 usuarios con más citas
-    top_users = User.objects.filter(is_superuser=False).annotate(
+    top_users_qs = User.objects.filter(is_superuser=False).annotate(
         appointments_count=Count('appointments')
     ).order_by('-appointments_count')[:5]
+
+    top_users = []
+    for user in top_users_qs:
+        profile = UserProfile.objects.filter(user=user).first()
+        top_users.append({
+            'user': user,
+            'profile': profile,
+            'appointments_count': user.appointments_count,
+        })
     
     # Servicios más solicitados (simulado con citas)
     service_stats = Service.objects.filter(is_active=True).annotate(
