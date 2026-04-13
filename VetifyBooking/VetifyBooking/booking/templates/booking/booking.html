@@ -100,24 +100,25 @@
                 </div>
 
                 <!-- Fecha y hora -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-                    <div>
-                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
-                            <i class="bi bi-calendar" style="color:#0284c7;"></i> Fecha *
-                        </label>
-                        <input type="date" name="date" required
-                               value="{{ form.date.value|default:'' }}"
-                               style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; transition:all 0.3s;"
-                               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
-                    </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
-                            <i class="bi bi-clock" style="color:#0284c7;"></i> Hora *
-                        </label>
-                        <input type="time" name="time" required
-                               value="{{ form.time.value|default:'' }}"
-                               style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; transition:all 0.3s;"
-                               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
+                        <i class="bi bi-calendar" style="color:#0284c7;"></i> Fecha *
+                    </label>
+                    <input type="date" name="date" required
+                        value="{{ form.date.value|default:'' }}"
+                        style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; transition:all 0.3s;"
+                        onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+
+                <!-- Hora con selector de botones -->
+                <div style="margin-bottom:1.5rem;">
+                    <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.75rem; font-size:0.875rem;">
+                        <i class="bi bi-clock" style="color:#0284c7;"></i> Hora *
+                    </label>
+                    <div id="horasGrid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.5rem;"></div>
+                    <input type="hidden" name="time" id="timeHidden" required value="{{ form.time.value|default:'' }}">
+                    <div id="horaSeleccionada" style="display:none; margin-top:0.75rem; background:#dbeafe; color:#1e40af; padding:0.5rem 0.875rem; border-radius:0.5rem; font-size:0.875rem; font-weight:600;">
+                        <i class="bi bi-clock-fill"></i> Hora seleccionada: <span id="horaTexto"></span>
                     </div>
                 </div>
 
@@ -267,13 +268,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    if (preselectedVet) {
+    if (preselectedService) {
+        serviceSelect.value = preselectedService;
+        cargarVeterinarios(preselectedService);
+    }
+
+    if (preselectedVet && !preselectedService) {
         vetContainer.style.display = 'block';
-
-        if (preselectedService) {
-            serviceSelect.value = preselectedService;
-        }
-
         cargarVeterinarios(serviceSelect.value);
     }
 
@@ -303,6 +304,56 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 });
+// Horarios disponibles
+const horasDisponibles = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30',
+    '15:00', '15:30', '16:00', '16:30', '17:00',
+];
+
+function renderHoras(horaActual) {
+    const grid = document.getElementById('horasGrid');
+    grid.innerHTML = '';
+    horasDisponibles.forEach(hora => {
+        const sel = hora === horaActual;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = hora;
+        btn.style.cssText = `
+            padding: 0.6rem 0.5rem;
+            border-radius: 0.5rem;
+            border: 2px solid ${sel ? '#0284c7' : '#e5e7eb'};
+            background: ${sel ? '#0284c7' : 'white'};
+            color: ${sel ? 'white' : '#374151'};
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        btn.onmouseover = () => {
+            if (!sel) {
+                btn.style.borderColor = '#0284c7';
+                btn.style.color = '#0284c7';
+            }
+        };
+        btn.onmouseout = () => {
+            if (document.getElementById('timeHidden').value !== hora) {
+                btn.style.borderColor = '#e5e7eb';
+                btn.style.color = '#374151';
+            }
+        };
+        btn.onclick = () => {
+            document.getElementById('timeHidden').value = hora;
+            document.getElementById('horaTexto').textContent = hora;
+            document.getElementById('horaSeleccionada').style.display = 'block';
+            renderHoras(hora);
+        };
+        grid.appendChild(btn);
+    });
+}
+
+// Inicializar con valor existente si lo hay
+renderHoras(document.getElementById('timeHidden').value || '');
 </script>
 {% endblock %}
 

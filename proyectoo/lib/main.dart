@@ -21,9 +21,13 @@ import 'package:flutter/services.dart';
 // ════════════════════════════════════════════════════════════════
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.118:8000/api';
+  //IPs
+  static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
+  //static const String baseUrl = 'http://192.168.56.1:8000/api';  //UTT
+  //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
+  static const _timeout = Duration(seconds: 10);
 
   static String get serverOrigin => Uri.parse(baseUrl).origin;
 
@@ -77,7 +81,7 @@ class ApiService {
           'email': email.trim().toLowerCase(),
           'password': password,
         }),
-      );
+      ).timeout(_timeout);
       print('STATUS: ${res.statusCode}');
       print('BODY: ${res.body}');
       if (res.statusCode == 200) {
@@ -120,7 +124,7 @@ class ApiService {
           if (firstName != null && firstName.trim().isNotEmpty)
             'first_name': firstName.trim(),
         }),
-      );
+      ).timeout(_timeout);
       if (res.statusCode == 201) {
         final data = json.decode(res.body) as Map<String, dynamic>;
         _token = data['token'] as String?;
@@ -150,14 +154,14 @@ class ApiService {
 
   static Future<List<dynamic>> getServiciosConVets() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/servicios-con-vets/'), headers: _headers);
+        Uri.parse('$baseUrl/servicios-con-vets/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error servicios: ${res.statusCode}');
   }
 
   static Future<Map<String, dynamic>> getCitaDetalle(int id) async {
     final res = await http.get(
-        Uri.parse('$baseUrl/citas/$id/detalle/'), headers: _headers);
+        Uri.parse('$baseUrl/citas/$id/detalle/'), headers: _headers).timeout(_timeout);
     print('CITA DETALLE STATUS: ${res.statusCode}');
     print('CITA DETALLE BODY: ${res.body.substring(0, min(200, res.body.length))}');
     if (res.statusCode == 200) return json.decode(res.body);
@@ -166,7 +170,7 @@ class ApiService {
 
   static Future<List<dynamic>> getHistorialMedico() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/historial-medico/'), headers: _headers);
+        Uri.parse('$baseUrl/historial-medico/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error historial: ${res.statusCode}');
   }
@@ -175,7 +179,7 @@ class ApiService {
 
   static Future<List<dynamic>> getMascotas() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/mascotas/'), headers: _headers);
+        Uri.parse('$baseUrl/mascotas/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error mascotas: ${res.statusCode}');
   }
@@ -195,7 +199,7 @@ class ApiService {
         });
         req.files.add(
             await http.MultipartFile.fromPath('photo', photoPath));
-        final streamed = await req.send();
+        final streamed = await req.send().timeout(_timeout);
         final res = await http.Response.fromStream(streamed);
         if (res.statusCode == 201) {
           return json.decode(res.body) as Map<String, dynamic>;
@@ -204,7 +208,7 @@ class ApiService {
       }
     }
     final res = await http.post(Uri.parse('$baseUrl/mascotas/'),
-        headers: _headers, body: json.encode(data));
+        headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 201) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
@@ -227,7 +231,7 @@ class ApiService {
         });
         req.files.add(
             await http.MultipartFile.fromPath('photo', photoPath));
-        final streamed = await req.send();
+        final streamed = await req.send().timeout(_timeout);
         final res = await http.Response.fromStream(streamed);
         if (res.statusCode == 200) {
           return json.decode(res.body) as Map<String, dynamic>;
@@ -236,7 +240,7 @@ class ApiService {
       }
     }
     final res = await http.patch(Uri.parse('$baseUrl/mascotas/$id/'),
-        headers: _headers, body: json.encode(data));
+        headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 200) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
@@ -245,7 +249,7 @@ class ApiService {
 
   static Future<void> eliminarMascota(int id) async {
     final res = await http.delete(
-        Uri.parse('$baseUrl/mascotas/$id/'), headers: _headers);
+        Uri.parse('$baseUrl/mascotas/$id/'), headers: _headers).timeout(_timeout);
     if (res.statusCode != 204) throw Exception('Error eliminar mascota');
   }
 
@@ -253,7 +257,7 @@ class ApiService {
 
   static Future<List<dynamic>> getCitas() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/citas/'), headers: _headers);
+        Uri.parse('$baseUrl/citas/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error citas: ${res.statusCode}');
   }
@@ -261,7 +265,7 @@ class ApiService {
   static Future<Map<String, dynamic>> crearCita(
       Map<String, dynamic> data) async {
     final res = await http.post(Uri.parse('$baseUrl/citas/'),
-        headers: _headers, body: json.encode(data));
+        headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 201) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
@@ -270,7 +274,7 @@ class ApiService {
 
   static Future<void> cancelarCita(int id) async {
     final res = await http.delete(
-        Uri.parse('$baseUrl/citas/$id/'), headers: _headers);
+        Uri.parse('$baseUrl/citas/$id/'), headers: _headers).timeout(_timeout);
     if (res.statusCode != 204) throw Exception('Error cancelar cita');
   }
 
@@ -278,14 +282,14 @@ class ApiService {
 
   static Future<List<dynamic>> getVeterinarios() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/veterinarios/'), headers: _headers);
+        Uri.parse('$baseUrl/veterinarios/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error veterinarios: ${res.statusCode}');
   }
 
   static Future<List<String>> getAvailableSlots(int vetId, String date) async {
     final res = await http.get(
-        Uri.parse('$baseUrl/available_slots/?vet_id=$vetId&date=$date'), headers: _headers);
+        Uri.parse('$baseUrl/available_slots/?vet_id=$vetId&date=$date'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) {
       final data = json.decode(res.body);
       return List<String>.from(data['available_slots']);
@@ -297,7 +301,7 @@ class ApiService {
 
   static Future<List<dynamic>> getConsultas() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/consultas/'), headers: _headers);
+        Uri.parse('$baseUrl/consultas/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error consultas: ${res.statusCode}');
   }
@@ -306,15 +310,15 @@ class ApiService {
 
   static Future<List<dynamic>> getHospitalizaciones() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/hospitalizaciones/'), headers: _headers);
-    if (res.statusCode == 200) return json.decode(res.body);
+        Uri.parse('$baseUrl/hospitalizaciones/'), headers: _headers).timeout(_timeout);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error hospitalizaciones: ${res.statusCode}');
   }
 
   static Future<Map<String, dynamic>> getHospitalizacionDetalle(int id) async {
     final res = await http.get(
-        Uri.parse('$baseUrl/hospitalizaciones/$id/'), headers: _headers);
-    if (res.statusCode == 200) return json.decode(res.body);
+        Uri.parse('$baseUrl/hospitalizaciones/$id/'), headers: _headers).timeout(_timeout);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error hospitalizacion detalle: ${res.statusCode}');
   }
 
@@ -322,7 +326,7 @@ class ApiService {
 
   static Future<List<dynamic>> getPerfiles() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/perfiles/'), headers: _headers);
+        Uri.parse('$baseUrl/perfiles/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body);
     throw Exception('Error perfiles: ${res.statusCode}');
   }
@@ -330,7 +334,7 @@ class ApiService {
   static Future<void> editarPerfil(
       int id, Map<String, dynamic> data) async {
     final res = await http.put(Uri.parse('$baseUrl/perfiles/$id/'),
-        headers: _headers, body: json.encode(data));
+        headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode != 200) {
       throw Exception(formatApiError(res.body));
     }
@@ -341,7 +345,7 @@ class ApiService {
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Token $_token'; // solo este header
     request.files.add(await http.MultipartFile.fromPath('avatar', imagePath));
-    final streamed = await request.send();
+    final streamed = await request.send().timeout(_timeout);
     final res = await http.Response.fromStream(streamed);
     print('AVATAR STATUS: ${res.statusCode}');
     print('AVATAR BODY: ${res.body}');
@@ -352,14 +356,14 @@ class ApiService {
 
   static Future<List<dynamic>> getHorariosClinica() async {
     final res = await http.get(
-        Uri.parse('$baseUrl/horarios/'), headers: _headers);
+        Uri.parse('$baseUrl/horarios/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) return json.decode(res.body) as List<dynamic>;
     throw Exception(formatApiError(res.body));
   }
 
   static Future<Map<String, dynamic>> getMe() async {
     final res =
-        await http.get(Uri.parse('$baseUrl/me/'), headers: _headers);
+        await http.get(Uri.parse('$baseUrl/me/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
@@ -372,7 +376,7 @@ class ApiService {
       Uri.parse('$baseUrl/me/'),
       headers: _headers,
       body: json.encode(data),
-    );
+    ).timeout(_timeout);
     if (res.statusCode == 200) {
       return json.decode(res.body) as Map<String, dynamic>;
     }
@@ -917,23 +921,29 @@ class AppProvider with ChangeNotifier {
       final me = await ApiService.getMe();
       final u = usuarioActual;
       if (u == null) return;
-      u.nombre = (me['first_name'] as String?)?.trim().isNotEmpty == true
-          ? me['first_name'] as String
-          : u.nombre;
-      u.email = me['email'] as String? ?? u.email;
-      final un = me['username'] as String?;
-      if (un != null && un.isNotEmpty) u.username = un;
-      u.telefono = me['phone'] as String? ?? u.telefono;
-      u.direccion = me['address'] as String? ?? u.direccion;
+
+      final fn = (me['first_name'] as String?)?.trim() ?? '';
+      if (fn.isNotEmpty) u.nombre = fn;
+
+      final em = me['email'] as String? ?? '';
+      if (em.isNotEmpty) u.email = em;
+
+      final un = me['username'] as String? ?? '';
+      if (un.isNotEmpty) u.username = un;
+
+      u.telefono = me['phone'] as String? ?? '';
+      u.direccion = me['address'] as String? ?? '';
+
       final pid = me['profile_id'];
       u.perfilId = pid is int ? pid : (pid is num ? pid.toInt() : null);
 
       final avatar = me['avatar'] as String?;
-      if (avatar != null && avatar.isNotEmpty) {
-        u.foto = avatar;
-      }
+      if (avatar != null && avatar.isNotEmpty) u.foto = avatar;
+
+      notifyListeners();
     } catch (e) {
-      debugPrint('sync perfil: $e');
+      debugPrint('sync perfil error: $e');
+      // No relanza el error — la app continúa sin perfil sincronizado
     }
   }
 
@@ -941,28 +951,46 @@ class AppProvider with ChangeNotifier {
     cargando = true;
     notifyListeners();
     try {
-      await syncPerfilDesdeApi();
-      await cargarVeterinarios();
-      await cargarHorariosClinica();
-      await cargarServicios();
-      await cargarHistorialMedico();
+      // Sync perfil con timeout propio
+      await syncPerfilDesdeApi().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => debugPrint('syncPerfil timeout'),
+      );
 
-      final mRows = await ApiService.getMascotas();
-      mascotas = mRows.map((r) => Mascota.fromJson(r)).toList();
+      // Cargar todo en paralelo con timeout global
+      await Future.wait([
+        cargarVeterinarios(),
+        cargarHorariosClinica(),
+        cargarServicios(),
+        cargarHistorialMedico(),
+        cargarHospitalizaciones(),
+      ]).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () {
+          debugPrint('carga paralela timeout');
+          return <void>[];
+        },
+      );
 
-      final cRows = await ApiService.getCitas();
-      citas = cRows.map((r) => Cita.fromJson(r)).toList();
+      final results = await Future.wait([
+        ApiService.getMascotas(),
+        ApiService.getCitas(),
+        ApiService.getConsultas(),
+      ]).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () => [[], [], []],
+      );
 
-      final vRows = await ApiService.getConsultas();
-      visitas = vRows.map((r) => VisitaMedica.fromJson(r)).toList();
-
-      await cargarHospitalizaciones();
+      mascotas = results[0].map((r) => Mascota.fromJson(r)).toList();
+      citas    = results[1].map((r) => Cita.fromJson(r)).toList();
+      visitas  = results[2].map((r) => VisitaMedica.fromJson(r)).toList();
 
       generarNotificaciones();
     } catch (e) {
       debugPrint('Error cargarTodo: $e');
     }
-    cargando = false; notifyListeners();
+    cargando = false;
+    notifyListeners();
   }
 
   Future<void> cargarHospitalizaciones() async {
@@ -1226,8 +1254,12 @@ class _SplashScreenState extends State<SplashScreen> {
         email: '',
       );
       
-      await app.cargarTodo(); // syncPerfilDesdeApi actualiza el nombre y email
-      
+      // Timeout de seguridad — si cargarTodo tarda más de 15s igual navega
+      await app.cargarTodo().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => debugPrint('cargarTodo splash timeout'),
+      );
+
       if (!mounted) return;
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (_) => const HomeScreen()));

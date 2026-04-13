@@ -176,6 +176,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 ADMIN_SECRET_KEY = 'admin'
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.1.118']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '192.168.1.118', '172.20.10.13', '192.168.56.1']
 
 DEFAULT_CHARSET = 'utf-8'
