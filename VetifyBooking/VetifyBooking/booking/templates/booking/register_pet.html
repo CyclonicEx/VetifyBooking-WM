@@ -422,7 +422,9 @@
 
                                 <div class="radio-option">
                                     <div class="radio-card">
-                                        <input type="radio" name="species" value="dog" id="dog" {% if pet.species == "dog" %}checked{% endif %} onchange="updatePreview()">
+                                        <input type="radio" name="species" value="dog" id="dog"
+                                            {% if pet.species == "dog" or not pet %}checked{% endif %} 
+                                            onchange="updatePreview()">
                                         <label for="dog">
                                             <div class="radio-emoji">🐕</div>
                                             <div>Perro</div>

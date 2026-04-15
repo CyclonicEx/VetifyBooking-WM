@@ -161,33 +161,33 @@ from datetime import date
 @login_required
 def register_pet_view(request):
     if request.method == 'POST':
-        pet = Pet(owner=request.user)
+        pet_type = request.POST.get('species', '').strip()
+        if not pet_type:
+            messages.error(request, 'Selecciona el tipo de mascota.')
+            return render(request, 'booking/register_pet.html', {
+                'today': date.today().isoformat()
+            })
 
-        pet.name = request.POST.get('name')
-        pet.pet_type = request.POST.get('species')
-        pet.other_type = request.POST.get('other_type', '')
+        pet = Pet(owner=request.user)
+        pet.name = request.POST.get('name', '').strip()
+        pet.pet_type = pet_type
         pet.breed = request.POST.get('breed', '')
         pet.color = request.POST.get('color', '')
         pet.date_of_birth = request.POST.get('date_of_birth') or None
         pet.weight = request.POST.get('weight', 0)
         pet.vaccination_status = request.POST.get('vaccination', 'updated')
         pet.allergies = request.POST.get('allergies', '')
-        pet.friendly_with_people = request.POST.get('friendly_people') == 'on'
-        pet.friendly_with_animals = request.POST.get('friendly_animals') == 'on'
-        pet.nervous_at_vet = request.POST.get('nervous') == 'on'
-        pet.special_care = request.POST.get('special_care') == 'on'
-        pet.emergency_contact_name = request.POST.get('emergency_name', '')
-        pet.emergency_contact_phone = request.POST.get('emergency_phone', '')
-
         if 'photo' in request.FILES:
             pet.photo = request.FILES['photo']
-
         pet.save()
 
         messages.success(request, f'¡{pet.name} ha sido registrado exitosamente!')
-        return redirect('profile')
+        next_url = request.POST.get('next', '').strip()
+        return redirect(next_url if next_url else 'profile')
 
-    return render(request, 'booking/register_pet.html', {'today': date.today().isoformat()})
+    return render(request, 'booking/register_pet.html', {
+        'today': date.today().isoformat()
+    })
 
 
 

@@ -439,8 +439,7 @@ class PrescriptionItem(models.Model):
 
     def __str__(self):
         return f"{self.medication} - {self.dose}"
-    
-    
+
 # =========================
 #     VACCINE MODEL
 # =========================

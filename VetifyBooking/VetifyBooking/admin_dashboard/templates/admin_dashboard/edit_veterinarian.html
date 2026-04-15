@@ -9,6 +9,17 @@
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
 
+            <div style="display:flex; flex-direction:column; gap:0.25rem; margin-bottom:1rem;">
+                <label style="font-size:0.875rem; font-weight:600; color:#374151;">Foto</label>
+                {% if vet.photo %}
+                <div style="margin-bottom:0.5rem;">
+                    <img src="{{ vet.photo.url }}" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+                </div>
+                {% endif %}
+                <input type="file" name="photo" accept="image/*"
+                       style="padding:0.625rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem;">
+            </div>
+
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div style="display:flex; flex-direction:column; gap:0.25rem;">
                     <label style="font-size:0.875rem; font-weight:600; color:#374151;">Nombre completo *</label>
@@ -65,17 +76,6 @@
                           style="width:100%; padding:0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; resize:vertical;">{{ vet.bio }}</textarea>
             </div>
 
-            <!-- Foto -->
-            <div style="display:flex; flex-direction:column; gap:0.25rem; margin-bottom:1rem;">
-                <label style="font-size:0.875rem; font-weight:600; color:#374151;">Foto</label>
-                {% if vet.photo %}
-                <div style="margin-bottom:0.5rem;">
-                    <img src="{{ vet.photo.url }}" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
-                </div>
-                {% endif %}
-                <input type="file" name="photo" accept="image/*"
-                       style="padding:0.625rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem;">
-            </div>
 
             <!-- Servicios -->
             <div style="display:flex; flex-direction:column; gap:0.25rem; margin-bottom:1.5rem;">

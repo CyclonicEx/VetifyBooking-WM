@@ -180,7 +180,7 @@
 
 <!-- Modal Nueva Cita -->
 <div id="modalCrearCita" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:white; border-radius:1rem; padding:2rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; margin:1rem;">
+    <div style="background:white; border-radius:1rem; padding:2rem; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; margin:1rem;">
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h2 style="font-size:1.25rem; font-weight:700; color:#0f172a;">
@@ -192,12 +192,14 @@
 
         <form method="POST" action="{% url 'admin_dashboard:create_appointment_admin' %}">
             {% csrf_token %}
-
             <div style="display:flex; flex-direction:column; gap:1rem;">
 
+                <!-- Usuario -->
                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">Usuario *</label>
-                    <select name="user" required class="filter-input" id="userSelect" onchange="filterPets()">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-person" style="color:#1565C0;"></i> Usuario *
+                    </label>
+                    <select name="user" required class="filter-input" id="modalUserSelect" onchange="modalFilterPets()">
                         <option value="">Seleccionar usuario...</option>
                         {% for u in users %}
                         <option value="{{ u.id }}">{{ u.username }} — {{ u.get_full_name }}</option>
@@ -205,45 +207,79 @@
                     </select>
                 </div>
 
+                <!-- Mascota -->
                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">Mascota *</label>
-                    <select name="pet" required class="filter-input" id="petSelect">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-heart-pulse" style="color:#1565C0;"></i> Mascota *
+                    </label>
+                    <select name="pet" required class="filter-input" id="modalPetSelect">
                         <option value="">Primero selecciona un usuario...</option>
                         {% for pet in pets %}
-                        <option value="{{ pet.id }}" data-owner="{{ pet.owner.id }}">{{ pet.name }} ({{ pet.owner.username }})</option>
+                        <option value="{{ pet.id }}" data-owner="{{ pet.owner.id }}">
+                            {{ pet.name }} — {{ pet.get_pet_type_display }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
 
+                <!-- Servicio -->
                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">Servicio *</label>
-                    <select name="service" required class="filter-input">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-capsule" style="color:#1565C0;"></i> Servicio *
+                    </label>
+                    <select name="service" required class="filter-input" id="modalServiceSelect" onchange="modalCargarVets()">
+                        <option value="">Seleccionar servicio...</option>
                         {% for service in services %}
-                        <option value="{{ service.id }}">{{ service.name }}</option>
+                        <option value="{{ service.id }}">{{ service.name }} — ${{ service.price }} ({{ service.duration }} min)</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Fecha *</label>
-                        <input type="date" name="date" required class="filter-input">
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                        <label style="font-size:0.875rem; font-weight:600; color:#374151;">Hora *</label>
-                        <input type="time" name="time" required class="filter-input">
+                <!-- Veterinario -->
+                <div id="modalVetContainer" style="display:none; flex-direction:column; gap:0.5rem;">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-person-badge" style="color:#1565C0;"></i> Veterinario (opcional)
+                    </label>
+                    <select name="veterinarian" class="filter-input" id="modalVetSelect">
+                        <option value="">Sin preferencia</option>
+                    </select>
+                </div>
+
+                <!-- Fecha -->
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-calendar" style="color:#1565C0;"></i> Fecha *
+                    </label>
+                    <input type="date" name="date" required class="filter-input" id="modalFecha"
+                           onchange="modalCargarSlots()">
+                </div>
+
+                <!-- Horarios -->
+                <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-clock" style="color:#1565C0;"></i> Hora *
+                    </label>
+                    <div id="modalHorasGrid" style="display:grid; grid-template-columns:repeat(5,1fr); gap:0.4rem;"></div>
+                    <input type="hidden" name="time" id="modalTimeHidden" required>
+                    <div id="modalHoraSeleccionada" style="display:none; margin-top:0.25rem; background:#dbeafe; color:#1e40af; padding:0.4rem 0.75rem; border-radius:0.5rem; font-size:0.8rem; font-weight:600;">
+                        <i class="bi bi-clock-fill"></i> Hora: <span id="modalHoraTexto"></span>
                     </div>
                 </div>
 
+                <!-- Notas -->
                 <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">Notas</label>
-                    <textarea name="notes" rows="2" class="filter-input" placeholder="Observaciones adicionales..."></textarea>
+                    <label style="font-size:0.875rem; font-weight:600; color:#374151;">
+                        <i class="bi bi-chat-text" style="color:#1565C0;"></i> Notas
+                    </label>
+                    <textarea name="notes" rows="2" class="filter-input"
+                              placeholder="Observaciones adicionales..."></textarea>
                 </div>
 
             </div>
 
             <div style="display:flex; gap:1rem; margin-top:1.5rem;">
-                <button type="button" onclick="document.getElementById('modalCrearCita').style.display='none'"
+                <button type="button"
+                        onclick="document.getElementById('modalCrearCita').style.display='none'"
                         class="btn" style="flex:1; background:white; border:2px solid #e5e7eb; color:#374151;">
                     Cancelar
                 </button>
@@ -256,18 +292,98 @@
 </div>
 
 <script>
-function filterPets() {
-    const userId = document.getElementById('userSelect').value;
-    const petSelect = document.getElementById('petSelect');
+// ── Filtrar mascotas por usuario ──────────────────────────
+function modalFilterPets() {
+    const userId = document.getElementById('modalUserSelect').value;
+    const petSelect = document.getElementById('modalPetSelect');
     const options = petSelect.querySelectorAll('option');
-
     options.forEach(opt => {
         if (!opt.value) return;
         opt.style.display = opt.dataset.owner === userId ? '' : 'none';
     });
-
     petSelect.value = '';
 }
+
+// ── Cargar veterinarios por servicio ─────────────────────
+let modalVetsData = [];
+function modalCargarVets() {
+    const serviceId = document.getElementById('modalServiceSelect').value;
+    const vetContainer = document.getElementById('modalVetContainer');
+    const vetSelect = document.getElementById('modalVetSelect');
+    if (!serviceId) { vetContainer.style.display = 'none'; return; }
+
+    fetch(`/api/vets-by-service/${serviceId}/`)
+        .then(r => r.json())
+        .then(data => {
+            modalVetsData = data.vets;
+            vetSelect.innerHTML = '<option value="">Sin preferencia</option>';
+            data.vets.forEach(vet => {
+                vetSelect.innerHTML += `<option value="${vet.id}">Dr(a). ${vet.name} — ${vet.specialty}</option>`;
+            });
+            vetContainer.style.display = data.vets.length > 0 ? 'flex' : 'none';
+            modalCargarSlots();
+        })
+        .catch(() => { vetContainer.style.display = 'none'; });
+}
+
+// ── Horarios disponibles ──────────────────────────────────
+const HORAS_DEFAULT = [
+    '09:00','09:30','10:00','10:30','11:00','11:30',
+    '12:00','12:30','13:00','14:00',
+    '15:00','15:30','16:00','16:30','17:00',
+];
+
+function modalRenderHoras(horas, seleccionada) {
+    const grid = document.getElementById('modalHorasGrid');
+    grid.innerHTML = '';
+    if (!horas || horas.length === 0) {
+        grid.innerHTML = '<p style="color:#6b7280; font-size:0.8rem; grid-column:1/-1;">Selecciona un veterinario y fecha para ver horarios disponibles</p>';
+        return;
+    }
+    horas.forEach(hora => {
+        const sel = hora === seleccionada;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = hora;
+        btn.style.cssText = `
+            padding:.5rem .25rem; border-radius:.5rem;
+            border:2px solid ${sel ? '#1565C0' : '#e5e7eb'};
+            background:${sel ? '#1565C0' : 'white'};
+            color:${sel ? 'white' : '#374151'};
+            font-weight:600; font-size:.8rem; cursor:pointer; transition:all .2s;
+        `;
+        btn.onmouseover = () => { if (!sel) { btn.style.borderColor='#1565C0'; btn.style.color='#1565C0'; } };
+        btn.onmouseout  = () => { if (document.getElementById('modalTimeHidden').value !== hora) { btn.style.borderColor='#e5e7eb'; btn.style.color='#374151'; } };
+        btn.onclick = () => {
+            document.getElementById('modalTimeHidden').value = hora;
+            document.getElementById('modalHoraTexto').textContent = hora;
+            document.getElementById('modalHoraSeleccionada').style.display = 'block';
+            modalRenderHoras(horas, hora);
+        };
+        grid.appendChild(btn);
+    });
+}
+
+function modalCargarSlots() {
+    const vetId  = document.getElementById('modalVetSelect')?.value;
+    const fecha  = document.getElementById('modalFecha').value;
+    const actual = document.getElementById('modalTimeHidden').value;
+
+    if (vetId && fecha) {
+        fetch(`/api/available_slots/?vet_id=${vetId}&date=${fecha}`)
+            .then(r => r.json())
+            .then(data => modalRenderHoras(data.available_slots || HORAS_DEFAULT, actual))
+            .catch(() => modalRenderHoras(HORAS_DEFAULT, actual));
+    } else {
+        modalRenderHoras(HORAS_DEFAULT, actual);
+    }
+}
+
+// Escuchar cambio de veterinario también recarga slots
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('modalVetSelect')?.addEventListener('change', modalCargarSlots);
+    modalRenderHoras(HORAS_DEFAULT, '');
+});
 </script>
 
 {% endblock %}

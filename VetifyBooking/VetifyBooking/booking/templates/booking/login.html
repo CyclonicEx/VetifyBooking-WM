@@ -1,51 +1,412 @@
 {% extends 'booking/base.html' %}
-
 {% block title %}Iniciar Sesión - Vetify Booking{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0fdf4 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .auth-page::before {
+        content: '';
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(21,101,192,0.08) 0%, transparent 70%);
+        top: -200px;
+        right: -200px;
+        border-radius: 50%;
+    }
+
+    .auth-page::after {
+        content: '';
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(5,150,105,0.06) 0%, transparent 70%);
+        bottom: -100px;
+        left: -100px;
+        border-radius: 50%;
+    }
+
+    .auth-wrapper {
+        width: 100%;
+        max-width: 440px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .auth-brand {
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .auth-brand-logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        background: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 9999px;
+        box-shadow: 0 4px 16px rgba(21,101,192,0.12);
+    }
+
+    .auth-brand-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #1565C0, #1976D2);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+    }
+
+    .auth-brand-name {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #1565C0;
+        letter-spacing: -0.5px;
+    }
+
+    .auth-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 2.5rem;
+        box-shadow: 0 20px 60px rgba(21,101,192,0.1), 0 4px 16px rgba(0,0,0,0.06);
+        border: 1px solid rgba(21,101,192,0.08);
+    }
+
+    .auth-header {
+        margin-bottom: 2rem;
+    }
+
+    .auth-header h2 {
+        font-size: 1.625rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 0.375rem;
+        letter-spacing: -0.5px;
+    }
+
+    .auth-header p {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-label i { color: #1565C0; font-size: 0.875rem; }
+
+    .field-wrapper {
+        position: relative;
+    }
+
+    .field-wrapper input {
+        width: 100%;
+        padding: 0.8rem 1rem 0.8rem 2.75rem;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 0.75rem;
+        font-size: 0.9375rem;
+        color: #0f172a;
+        background: #f8fafc;
+        transition: all 0.2s;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    .field-wrapper input:focus {
+        border-color: #1565C0;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+    }
+
+    .field-wrapper input.invalid {
+        border-color: #dc2626;
+        background: #fff5f5;
+    }
+
+    .field-icon {
+        position: absolute;
+        left: 0.875rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 0.95rem;
+        pointer-events: none;
+        transition: color 0.2s;
+    }
+
+    .field-wrapper:focus-within .field-icon { color: #1565C0; }
+
+    .toggle-pass {
+        position: absolute;
+        right: 0.875rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #94a3b8;
+        font-size: 1rem;
+        padding: 0;
+        transition: color 0.2s;
+    }
+
+    .toggle-pass:hover { color: #1565C0; }
+
+    .error-msg {
+        font-size: 0.75rem;
+        color: #dc2626;
+        margin-top: 0.375rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        display: none;
+    }
+
+    .error-msg.show { display: flex; }
+
+    .server-errors {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .server-errors p {
+        font-size: 0.8125rem;
+        color: #dc2626;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin: 0;
+    }
+
+    .auth-btn {
+        width: 100%;
+        padding: 0.9rem;
+        background: linear-gradient(135deg, #1565C0, #1976D2);
+        color: white;
+        border: none;
+        border-radius: 0.875rem;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        letter-spacing: 0.25px;
+    }
+
+    .auth-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(21,101,192,0.35);
+    }
+
+    .auth-btn:active { transform: translateY(0); }
+
+    .auth-footer {
+        text-align: center;
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-top: 1.25rem;
+    }
+
+    .auth-footer a {
+        color: #1565C0;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .auth-footer a:hover { text-decoration: underline; }
+
+    .features-row {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-top: 1.75rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .feature-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .feature-item i {
+        font-size: 1.125rem;
+        color: #1565C0;
+        opacity: 0.7;
+    }
+
+    @media (max-width: 480px) {
+        .auth-card { padding: 1.75rem 1.5rem; }
+        .features-row { gap: 1rem; }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="auth-page">
     <div class="auth-wrapper">
 
-        <div class="auth-card">
+        <div class="auth-brand">
+            <div class="auth-brand-logo">
+                <div class="auth-brand-icon">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                </div>
+                <span class="auth-brand-name">Vetify</span>
+            </div>
+        </div>
 
+        <div class="auth-card">
             <div class="auth-header">
-                <i class="bi bi-shield-lock auth-main-icon"></i>
                 <h2>Bienvenido de nuevo</h2>
-                <p>Inicia sesión para gestionar tus citas</p>
+                <p>Inicia sesión para gestionar las citas de tu mascota</p>
             </div>
 
-            <form method="post" class="auth-form">
+            {% if form.errors or messages %}
+            <div class="server-errors">
+                {% for message in messages %}
+                <p><i class="bi bi-exclamation-circle-fill"></i> {{ message }}</p>
+                {% endfor %}
+                {% if form.errors %}
+                <p><i class="bi bi-exclamation-circle-fill"></i> Usuario o contraseña incorrectos. Inténtalo de nuevo.</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <form method="post" id="loginForm" novalidate>
                 {% csrf_token %}
 
                 <div class="form-group">
-                    <label>Usuario</label>
-                    <div class="input-group">
-                        <i class="bi bi-person"></i>
-                        <input type="text" name="username" required placeholder="Ingresa tu usuario">
+                    <label class="form-label" for="id_username">
+                        <i class="bi bi-person-fill"></i> Usuario
+                    </label>
+                    <div class="field-wrapper">
+                        <input type="text" name="username" id="id_username"
+                               placeholder="Ingresa tu nombre de usuario"
+                               autocomplete="username" autofocus>
+                        <i class="bi bi-person field-icon"></i>
+                    </div>
+                    <div class="error-msg" id="err_username">
+                        <i class="bi bi-exclamation-circle"></i> El usuario es obligatorio
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Contraseña</label>
-                    <div class="input-group">
-                        <i class="bi bi-lock"></i>
-                        <input type="password" name="password" required placeholder="Ingresa tu contraseña">
+                    <label class="form-label" for="id_password">
+                        <i class="bi bi-lock-fill"></i> Contraseña
+                    </label>
+                    <div class="field-wrapper">
+                        <input type="password" name="password" id="id_password"
+                               placeholder="Ingresa tu contraseña"
+                               autocomplete="current-password">
+                        <i class="bi bi-lock field-icon"></i>
+                        <button type="button" class="toggle-pass" id="togglePass"
+                                onclick="togglePassword()" title="Mostrar/ocultar contraseña">
+                            <i class="bi bi-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                    <div class="error-msg" id="err_password">
+                        <i class="bi bi-exclamation-circle"></i> La contraseña es obligatoria
                     </div>
                 </div>
 
-                <button type="submit" class="auth-btn">
+                <button type="submit" class="auth-btn" id="submitBtn">
                     <i class="bi bi-box-arrow-in-right"></i> Iniciar sesión
                 </button>
-
-                <p class="auth-footer">
-                    ¿No tienes una cuenta?
-                    <a href="{% url 'register' %}">Crear una</a>
-                </p>
-
             </form>
 
-        </div>
+            <div class="auth-footer">
+                ¿No tienes cuenta?
+                <a href="{% url 'register' %}">Regístrate gratis</a>
+            </div>
 
+            <div class="features-row">
+                <div class="feature-item">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Citas en línea</span>
+                </div>
+                <div class="feature-item">
+                    <i class="bi bi-file-medical"></i>
+                    <span>Historial médico</span>
+                </div>
+                <div class="feature-item">
+                    <i class="bi bi-bell"></i>
+                    <span>Recordatorios</span>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById('id_password');
+    const icon  = document.getElementById('eyeIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+    }
+}
+
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    let valid = true;
+    const u = document.getElementById('id_username').value.trim();
+    const p = document.getElementById('id_password').value;
+    const errU = document.getElementById('err_username');
+    const errP = document.getElementById('err_password');
+
+    errU.classList.remove('show');
+    errP.classList.remove('show');
+    document.getElementById('id_username').classList.remove('invalid');
+    document.getElementById('id_password').classList.remove('invalid');
+
+    if (!u) {
+        errU.classList.add('show');
+        document.getElementById('id_username').classList.add('invalid');
+        valid = false;
+    }
+    if (!p) {
+        errP.classList.add('show');
+        document.getElementById('id_password').classList.add('invalid');
+        valid = false;
+    }
+    if (!valid) e.preventDefault();
+});
+</script>
 {% endblock %}

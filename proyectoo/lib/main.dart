@@ -15,6 +15,92 @@ import 'dart:async';
 import 'dart:math';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
+
+// ── SERVICIO DE NOTIFICACIONES ────────────────────────────
+class NotificacionesService {
+  static final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+  static bool _inicializado = false;
+
+  static Future<void> inicializar() async {
+    if (_inicializado) return;
+    tz.initializeTimeZones();
+
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const settings = InitializationSettings(android: android);
+
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (_) {},
+    );
+
+    _inicializado = true;
+  }
+
+  static Future<void> mostrarNotificacion({
+    required int id,
+    required String titulo,
+    required String cuerpo,
+  }) async {
+    await inicializar();
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'vetify_citas',
+        'Citas Veterinarias',
+        channelDescription: 'Recordatorios de citas',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+    );
+    await _plugin.show(id, titulo, cuerpo, details);
+  }
+
+  static Future<void> programarNotificacion({
+    required int id,
+    required String titulo,
+    required String cuerpo,
+    required DateTime fechaHora,
+  }) async {
+    await inicializar();
+    final ahora = DateTime.now();
+    if (fechaHora.isBefore(ahora)) return;
+
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'vetify_citas',
+        'Citas Veterinarias',
+        channelDescription: 'Recordatorios de citas',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+    );
+
+    await _plugin.zonedSchedule(
+      id,
+      titulo,
+      cuerpo,
+      tz.TZDateTime.from(fechaHora, tz.local),
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  static Future<void> cancelar(int id) async {
+    await _plugin.cancel(id);
+  }
+
+  static Future<void> cancelarTodas() async {
+    await _plugin.cancelAll();
+  }
+}
 
 // ════════════════════════════════════════════════════════════════
 //  API SERVICE
@@ -23,7 +109,7 @@ import 'package:flutter/services.dart';
 class ApiService {
   //IPs
   static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
-  //static const String baseUrl = 'http://192.168.56.1:8000/api';  //UTT
+  //static const String baseUrl = 'http://172.18.7.130:8000/api';  //UTT
   //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
@@ -1005,15 +1091,17 @@ class AppProvider with ChangeNotifier {
 
   // ── Notificaciones ───────────────────────────────
 
-  void generarNotificaciones() {
+  void generarNotificaciones() async {
     final ahora = DateTime.now();
     final nuevas = <AppNotificacion>[];
+
     for (final cita in citas) {
       if (cita.estado == 'cancelled') continue;
       final diff  = cita.fecha.difference(ahora);
       final dias  = diff.inDays;
       final horas = diff.inHours;
       String? titulo, cuerpo;
+
       if (horas >= 0 && horas <= 2) {
         titulo = '⏰ ¡Cita en menos de 2 horas!';
         cuerpo = 'A las ${cita.fecha.hour.toString().padLeft(2,'0')}:${cita.fecha.minute.toString().padLeft(2,'0')}';
@@ -1027,15 +1115,48 @@ class AppProvider with ChangeNotifier {
         titulo = '📆 Cita en $dias días';
         cuerpo = '${cita.fecha.day}/${cita.fecha.month}';
       }
+
       if (titulo != null) {
         final nId = 'cita_${cita.id}';
         if (!notificaciones.any((n) => n.id == nId)) {
           nuevas.add(AppNotificacion(
               id: nId, titulo: titulo, cuerpo: cuerpo!,
               fecha: ahora, tipo: 'cita'));
+
+          // ← Notificación real del sistema
+          await NotificacionesService.mostrarNotificacion(
+            id: cita.id,
+            titulo: titulo,
+            cuerpo: cuerpo!,
+          );
         }
       }
+
+      // Programar recordatorio 1 día antes
+      if (dias >= 1) {
+        final unDiaAntes = cita.fecha.subtract(const Duration(days: 1));
+        if (unDiaAntes.isAfter(ahora)) {
+          await NotificacionesService.programarNotificacion(
+            id: cita.id + 10000,
+            titulo: '📅 Recordatorio: cita mañana',
+            cuerpo: '${cita.fecha.day}/${cita.fecha.month} a las ${cita.fecha.hour.toString().padLeft(2,'0')}:${cita.fecha.minute.toString().padLeft(2,'0')}',
+            fechaHora: unDiaAntes,
+          );
+        }
+      }
+
+      // Programar recordatorio 2 horas antes
+      final dosHorasAntes = cita.fecha.subtract(const Duration(hours: 2));
+      if (dosHorasAntes.isAfter(ahora)) {
+        await NotificacionesService.programarNotificacion(
+          id: cita.id + 20000,
+          titulo: '⏰ Tu cita es en 2 horas',
+          cuerpo: 'A las ${cita.fecha.hour.toString().padLeft(2,'0')}:${cita.fecha.minute.toString().padLeft(2,'0')}',
+          fechaHora: dosHorasAntes,
+        );
+      }
     }
+
     if (nuevas.isNotEmpty) {
       notificaciones.insertAll(0, nuevas);
       notifyListeners();
@@ -1121,6 +1242,12 @@ class AppProvider with ChangeNotifier {
       citas.add(Cita.fromJson(row));
       generarNotificaciones();
       notifyListeners();
+      // Notificación inmediata de confirmación
+      await NotificacionesService.mostrarNotificacion(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        titulo: 'Cita agendada',
+        cuerpo: 'Tu cita fue registrada para el ${c.fecha.day}/${c.fecha.month}/${c.fecha.year}',
+      );
       return null;
     } catch (e) {
       return e.toString().replaceFirst('Exception: ', '');
@@ -3803,22 +3930,40 @@ class _PasosScreenState extends State<PasosScreen>
   @override
   void initState() {
     super.initState();
-    _ac = AnimationController(vsync: this,
-        duration: const Duration(seconds: 2))..repeat(reverse: true);
+    _ac = AnimationController(vsync: this, duration: const Duration(seconds: 2))
+        ..repeat(reverse: true);
     _an = Tween<double>(begin: -8, end: 8).animate(
         CurvedAnimation(parent: _ac, curve: Curves.easeInOut));
     _cargarHist();
+    _pedirPermiso();
+  }
+
+  Future<void> _pedirPermiso() async {
+    // Pedir permiso de actividad física
+    final status = await Permission.activityRecognition.request();
+    if (status.isDenied) {
+      if (mounted) _snack(context, 'Se necesita permiso para contar pasos');
+    }
   }
 
   void _iniciar() {
-    setState(() { _on = true; _sesion = 0; _base = 0; });
+    setState(() { _on = true; _sesion = 0; _base = 0; _err = false; });
+    
     _sub = Pedometer.stepCountStream.listen(
-      (e) => setState(() {
-        if (_base == 0) _base = e.steps;
-        _sesion = (e.steps - _base).clamp(0, 999999);
-      }),
-      onError: (_) { setState(() => _err = true); _simular(); },
-      cancelOnError: true,
+      (e) {
+        if (!mounted) return;
+        setState(() {
+          if (_base == 0) _base = e.steps;
+          _sesion = (e.steps - _base).clamp(0, 999999);
+        });
+      },
+      onError: (e) {
+        debugPrint('Pedometer error: $e');
+        setState(() => _err = true);
+        _snack(context, 'Sensor no disponible, usando simulación');
+        _simular();
+      },
+      cancelOnError: false,
     );
   }
 
@@ -4136,6 +4281,40 @@ class _ExpedienteScreenState extends State<ExpedienteScreen> {
               pw.SizedBox(height: 20),
             ]);
           }),
+          // Hospitalizaciones
+          if (app.hospitalizaciones.isNotEmpty) ...[
+            pw.SizedBox(height: 20),
+            _exSec('HOSPITALIZACIONES'),
+            pw.SizedBox(height: 8),
+            pw.Column(children: app.hospitalizaciones.map((h) => pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 10),
+              padding: const pw.EdgeInsets.all(10),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey300),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                  pw.Text(h.petName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                  pw.Text(h.statusDisplay, style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                ]),
+                pw.SizedBox(height: 4),
+                _exFila('Ingreso', h.admissionDate.substring(0, 10)),
+                _exFila('Motivo', h.reason),
+                _exFila('Diagnóstico', h.initialDiagnosis),
+                if (h.veterinarianName != null) _exFila('Veterinario', 'Dr(a). ${h.veterinarianName!}'),
+                if (h.dischargeDate != null) _exFila('Alta', h.dischargeDate!.substring(0, 10)),
+                if (h.treatments.isNotEmpty) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text('Tratamientos:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                  ...h.treatments.map((t) => pw.Text(
+                    '• ${t['medication']} — ${t['dose']} — ${t['frequency']}',
+                    style: pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                  )),
+                ],
+              ]),
+            )).toList()),
+          ],
         ],
       ));
 
@@ -5311,6 +5490,8 @@ void _snack(BuildContext ctx, String msg) {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificacionesService.inicializar();
+  await Permission.notification.request();
   runApp(ChangeNotifierProvider(
     create: (_) => AppProvider(),
     child: MaterialApp(
@@ -5428,7 +5609,6 @@ class HospitalizacionesScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border(left: BorderSide(color: _colorEstado(h.status), width: 4)),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4))],
                     ),
                     child: Padding(
@@ -5452,29 +5632,32 @@ class HospitalizacionesScreen extends StatelessWidget {
                           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Text(h.petName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                             const SizedBox(height: 4),
-                            Row(children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _colorEstado(h.status).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: _colorEstado(h.status).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _colorEstado(h.status).withValues(alpha: 0.3)),
+                              ),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(
+                                  h.status == 'active' ? Icons.local_hospital :
+                                  h.status == 'discharged' ? Icons.check_circle_outline :
+                                  h.status == 'transferred' ? Icons.swap_horiz : Icons.circle_outlined,
+                                  size: 13, color: _colorEstado(h.status),
                                 ),
-                                child: Text(h.statusDisplay,
+                                const SizedBox(width: 4),
+                                Text(h.statusDisplay,
                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
                                         color: _colorEstado(h.status))),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _colorPaciente(h.patientStatus).withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(h.patientStatusDisplay,
+                                const SizedBox(width: 6),
+                                Container(width: 1, height: 12, color: _colorEstado(h.status).withValues(alpha: 0.3)),
+                                const SizedBox(width: 6),
+                                Text(h.patientStatusDisplay,
                                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                                         color: _colorPaciente(h.patientStatus))),
-                              ),
-                            ]),
+                              ]),
+                            ),
                           ])),
                           const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                         ]),
@@ -5523,8 +5706,12 @@ class _HospitalizacionDetalleScreenState extends State<HospitalizacionDetalleScr
   Future<void> _cargar() async {
     try {
       final data = await ApiService.getHospitalizacionDetalle(widget.hospitalizacionId);
-      setState(() { _hosp = Hospitalizacion.fromJson(data); _loading = false; });
+      setState(() {
+        _hosp = Hospitalizacion.fromJson(data);
+        _loading = false;
+      });
     } catch (e) {
+      debugPrint('Error cargando hospitalización ${widget.hospitalizacionId}: $e');
       setState(() => _loading = false);
     }
   }

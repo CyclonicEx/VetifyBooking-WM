@@ -53,17 +53,32 @@
     }
 
     .hosp-card {
-        background: white; border-radius: 1rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        overflow: hidden; transition: .2s;
-        border-left: 4px solid transparent;
+        background: white;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #e5e7eb;
+        position: relative;
+        overflow: hidden;
+        transition: .2s;
         text-decoration: none; color: inherit; display: block;
     }
     .hosp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
-    .hosp-card.active  { border-left-color: #ef4444; }
-    .hosp-card.discharged { border-left-color: #10b981; }
-    .hosp-card.transferred { border-left-color: #f59e0b; }
-    .hosp-card.deceased { border-left-color: #6b7280; }
+
+    /* Indicador visual en esquina superior derecha */
+    .hosp-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 80px;
+        height: 80px;
+        border-radius: 0 1rem 0 100%;
+        opacity: 0.12;
+    }
+    .hosp-card.status-active::before      { background: #ef4444; }
+    .hosp-card.status-discharged::before  { background: #22c55e; }
+    .hosp-card.status-transferred::before { background: #f97316; }
 
     .hosp-card-header {
         padding: 1.25rem 1.25rem .75rem;
@@ -207,7 +222,7 @@
 <div class="hosp-grid">
     {% for h in hospitalizations %}
     <a href="{% url 'admin_dashboard:hospitalization_detail' h.pk %}"
-       class="hosp-card {{ h.status }}">
+       class="hosp-card status-{{ h.status }}">
         <div class="hosp-card-header">
             <div class="pet-avatar">
                 {% if h.pet.photo %}
@@ -224,6 +239,15 @@
                 </div>
                 <div style="margin-top:.4rem;">
                     <span class="badge badge-{{ h.status }}">
+                        {% if h.status == 'active' %}
+                            <i class="bi bi-hospital-fill"></i>
+                        {% elif h.status == 'discharged' %}
+                            <i class="bi bi-check-circle-fill"></i>
+                        {% elif h.status == 'transferred' %}
+                            <i class="bi bi-arrow-left-right"></i>
+                        {% else %}
+                            <i class="bi bi-circle"></i>
+                        {% endif %}
                         {{ h.get_status_display }}
                     </span>
                     &nbsp;
