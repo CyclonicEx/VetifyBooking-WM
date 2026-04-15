@@ -108,9 +108,9 @@ class NotificacionesService {
 
 class ApiService {
   //IPs
-  static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
+  //static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
   //static const String baseUrl = 'http://172.18.7.130:8000/api';  //UTT
-  //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
+  static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
   static const _timeout = Duration(seconds: 10);
@@ -171,14 +171,14 @@ class ApiService {
       print('STATUS: ${res.statusCode}');
       print('BODY: ${res.body}');
       if (res.statusCode == 200) {
-        final data = json.decode(res.body);
+        final data = json.decode(utf8.decode(res.bodyBytes));
         _token = data['token'];
         _userId = data['user_id'];
         await guardarSesion();
         return null;
       }
       try {
-        final b = json.decode(res.body);
+        final b = json.decode(utf8.decode(res.bodyBytes));
         if (b is Map && b['detail'] != null) {
           return b['detail'].toString();
         }
@@ -212,12 +212,12 @@ class ApiService {
         }),
       ).timeout(_timeout);
       if (res.statusCode == 201) {
-        final data = json.decode(res.body) as Map<String, dynamic>;
+        final data = json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         _token = data['token'] as String?;
         _userId = data['user_id'] as int?;
         return null;
       }
-      final decoded = json.decode(res.body);
+      final decoded = json.decode(utf8.decode(res.bodyBytes));
       if (decoded is Map<String, dynamic>) {
         final msgs = <String>[];
         for (final e in decoded.values) {
@@ -241,7 +241,7 @@ class ApiService {
   static Future<List<dynamic>> getServiciosConVets() async {
     final res = await http.get(
         Uri.parse('$baseUrl/servicios-con-vets/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error servicios: ${res.statusCode}');
   }
 
@@ -250,14 +250,14 @@ class ApiService {
         Uri.parse('$baseUrl/citas/$id/detalle/'), headers: _headers).timeout(_timeout);
     print('CITA DETALLE STATUS: ${res.statusCode}');
     print('CITA DETALLE BODY: ${res.body.substring(0, min(200, res.body.length))}');
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error cita detalle: ${res.statusCode}');
   }
 
   static Future<List<dynamic>> getHistorialMedico() async {
     final res = await http.get(
         Uri.parse('$baseUrl/historial-medico/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error historial: ${res.statusCode}');
   }
 
@@ -266,7 +266,7 @@ class ApiService {
   static Future<List<dynamic>> getMascotas() async {
     final res = await http.get(
         Uri.parse('$baseUrl/mascotas/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error mascotas: ${res.statusCode}');
   }
 
@@ -288,7 +288,7 @@ class ApiService {
         final streamed = await req.send().timeout(_timeout);
         final res = await http.Response.fromStream(streamed);
         if (res.statusCode == 201) {
-          return json.decode(res.body) as Map<String, dynamic>;
+          return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         }
         throw Exception(formatApiError(res.body));
       }
@@ -296,7 +296,7 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/mascotas/'),
         headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 201) {
-      return json.decode(res.body) as Map<String, dynamic>;
+      return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
   }
@@ -320,7 +320,7 @@ class ApiService {
         final streamed = await req.send().timeout(_timeout);
         final res = await http.Response.fromStream(streamed);
         if (res.statusCode == 200) {
-          return json.decode(res.body) as Map<String, dynamic>;
+          return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         }
         throw Exception(formatApiError(res.body));
       }
@@ -328,7 +328,7 @@ class ApiService {
     final res = await http.patch(Uri.parse('$baseUrl/mascotas/$id/'),
         headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 200) {
-      return json.decode(res.body) as Map<String, dynamic>;
+      return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
   }
@@ -344,7 +344,7 @@ class ApiService {
   static Future<List<dynamic>> getCitas() async {
     final res = await http.get(
         Uri.parse('$baseUrl/citas/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error citas: ${res.statusCode}');
   }
 
@@ -353,7 +353,7 @@ class ApiService {
     final res = await http.post(Uri.parse('$baseUrl/citas/'),
         headers: _headers, body: json.encode(data)).timeout(_timeout);
     if (res.statusCode == 201) {
-      return json.decode(res.body) as Map<String, dynamic>;
+      return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
   }
@@ -369,7 +369,7 @@ class ApiService {
   static Future<List<dynamic>> getVeterinarios() async {
     final res = await http.get(
         Uri.parse('$baseUrl/veterinarios/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error veterinarios: ${res.statusCode}');
   }
 
@@ -377,7 +377,7 @@ class ApiService {
     final res = await http.get(
         Uri.parse('$baseUrl/available_slots/?vet_id=$vetId&date=$date'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) {
-      final data = json.decode(res.body);
+      final data = json.decode(utf8.decode(res.bodyBytes));
       return List<String>.from(data['available_slots']);
     }
     throw Exception('Error available slots: ${res.statusCode}');
@@ -388,7 +388,7 @@ class ApiService {
   static Future<List<dynamic>> getConsultas() async {
     final res = await http.get(
         Uri.parse('$baseUrl/consultas/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error consultas: ${res.statusCode}');
   }
 
@@ -413,7 +413,7 @@ class ApiService {
   static Future<List<dynamic>> getPerfiles() async {
     final res = await http.get(
         Uri.parse('$baseUrl/perfiles/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body);
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes));
     throw Exception('Error perfiles: ${res.statusCode}');
   }
 
@@ -443,7 +443,7 @@ class ApiService {
   static Future<List<dynamic>> getHorariosClinica() async {
     final res = await http.get(
         Uri.parse('$baseUrl/horarios/'), headers: _headers).timeout(_timeout);
-    if (res.statusCode == 200) return json.decode(res.body) as List<dynamic>;
+    if (res.statusCode == 200) return json.decode(utf8.decode(res.bodyBytes)) as List<dynamic>;
     throw Exception(formatApiError(res.body));
   }
 
@@ -451,7 +451,7 @@ class ApiService {
     final res =
         await http.get(Uri.parse('$baseUrl/me/'), headers: _headers).timeout(_timeout);
     if (res.statusCode == 200) {
-      return json.decode(res.body) as Map<String, dynamic>;
+      return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
   }
@@ -464,7 +464,7 @@ class ApiService {
       body: json.encode(data),
     ).timeout(_timeout);
     if (res.statusCode == 200) {
-      return json.decode(res.body) as Map<String, dynamic>;
+      return json.decode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
     throw Exception(formatApiError(res.body));
   }
