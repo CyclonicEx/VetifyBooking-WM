@@ -175,6 +175,7 @@ def users_view(request):
     """Vista de gestión de usuarios"""
     
     search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', 'all')
     users = User.objects.filter(is_superuser=False).order_by('-date_joined')
     
     if search:
@@ -184,6 +185,12 @@ def users_view(request):
             Q(first_name__icontains=search) |
             Q(last_name__icontains=search)
         )
+        
+    if status_filter == 'active':
+        users = users.filter(is_active=True)
+    elif status_filter == 'inactive':
+        users = users.filter(is_active=False)
+
     
     # Agregar estadísticas por usuario
     users_data = []
@@ -200,6 +207,7 @@ def users_view(request):
         'users_data': users_data,
         'search': search,
         'total_count': users.count(),
+        'status_filter': status_filter,
     }
     
     return render(request, 'admin_dashboard/users.html', context)

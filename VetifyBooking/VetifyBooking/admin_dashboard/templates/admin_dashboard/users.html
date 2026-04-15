@@ -151,19 +151,26 @@
 
 <!-- Search Bar -->
 <div class="search-bar">
-
-    <form method="GET">
-
+    <form method="GET" style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
         <input
             type="text"
             name="search"
             class="search-input"
             placeholder="Buscar por nombre, email, username..."
             value="{{ search }}"
+            style="flex:1; min-width:200px;"
         >
-
+        <select name="status"
+                style="padding:0.75rem 1rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; min-width:160px; cursor:pointer;">
+            <option value="all"      {% if status_filter == 'all' or not status_filter %}selected{% endif %}>Todos los usuarios</option>
+            <option value="active"   {% if status_filter == 'active' %}selected{% endif %}> Activos</option>
+            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}> Desactivados</option>
+        </select>
+        <button type="submit"
+                style="padding:0.75rem 1.25rem; background:#1565C0; color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+            <i class="bi bi-search"></i> Filtrar
+        </button>
     </form>
-
 </div>
 
 
@@ -179,7 +186,7 @@
                 {{ total_count }} usuario{{ total_count|pluralize }} encontrado{{ total_count|pluralize }}
             </p>
         </div>
-        <button onclick="document.getElementById('modalCrearUsuario').style.display='flex'" 
+        <button onclick="document.getElementById('modalCrearUsuario').style.display='flex'"
                 class="btn" style="padding:0.625rem 1.25rem; background:#38bdf8; color:white; border:none; border-radius:0.5rem; font-weight:600; cursor:pointer;">
             <i class="bi bi-person-plus"></i> Nuevo Usuario
         </button>
@@ -260,13 +267,13 @@
                     {% if data.user.is_active %}
 
                         <span class="badge badge-active">
-                            ✓ Activo
+                            Activo
                         </span>
 
                     {% else %}
 
                         <span class="badge badge-inactive">
-                            ✗ Inactivo
+                            Inactivo
                         </span>
 
                     {% endif %}

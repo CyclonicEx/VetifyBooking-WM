@@ -65,21 +65,20 @@
     }
     .hosp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
 
-    /* Indicador visual en esquina superior derecha */
-    .hosp-card::before {
+    .hosp-card::after {
         content: '';
         position: absolute;
-        top: 0;
-        right: 0;
-        width: 80px;
-        height: 80px;
-        border-radius: 0 1rem 0 100%;
-        opacity: 0.12;
+        top: 1rem;
+        right: 1rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
     }
-    .hosp-card.status-active::before      { background: #ef4444; }
-    .hosp-card.status-discharged::before  { background: #22c55e; }
-    .hosp-card.status-transferred::before { background: #f97316; }
-
+    .hosp-card.status-active::after      { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+    .hosp-card.status-discharged::after  { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+    .hosp-card.status-transferred::after { background: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.2); }
+    .hosp-card.status-deceased::after    { background: #9ca3af; box-shadow: 0 0 0 3px rgba(156,163,175,0.2); }
+    
     .hosp-card-header {
         padding: 1.25rem 1.25rem .75rem;
         display: flex; gap: 1rem; align-items: flex-start;
