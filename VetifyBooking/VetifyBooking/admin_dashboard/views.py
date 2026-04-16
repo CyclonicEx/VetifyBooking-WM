@@ -161,6 +161,7 @@ def create_appointment_admin(request):
             user_id=request.POST.get('user'),
             pet_id=request.POST.get('pet'),
             service_id=request.POST.get('service'),
+            veterinarian_id=request.POST.get('veterinarian') or None,
             date=request.POST.get('date'),
             time=request.POST.get('time'),
             notes=request.POST.get('notes', ''),
