@@ -138,6 +138,7 @@ def appointments_view(request):
         'users': users,
         'pets': pets,
         'services': services,
+        'veterinarians': Veterinarian.objects.filter(is_active=True).order_by('name'),
     }
     return render(request, 'admin_dashboard/appointments.html', context)
 
