@@ -184,7 +184,40 @@ def citas_lista(request):
         citas = Appointment.objects.filter(user=request.user)
         return Response(AppointmentSerializer(citas, many=True).data)
 
-    serializer = AppointmentSerializer(data=request.data,
+    data = request.data
+    fecha = data.get('date')
+    hora  = data.get('time')
+    vet   = data.get('veterinarian')
+
+    # Validar cita duplicada del mismo usuario
+    cita_duplicada = Appointment.objects.filter(
+        user=request.user,
+        pet_id=data.get('pet'),
+        date=fecha,
+        time=hora,
+    ).exclude(status='cancelled').exists()
+
+    if cita_duplicada:
+        return Response(
+            {'detail': 'Ya tienes una cita agendada en esa fecha y hora.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validar mismo veterinario misma fecha y hora
+    if vet:
+        vet_ocupado = Appointment.objects.filter(
+            veterinarian_id=vet,
+            date=fecha,
+            time=hora,
+        ).exclude(status='cancelled').exists()
+
+        if vet_ocupado:
+            return Response(
+                {'detail': 'El veterinario ya tiene una cita en esa fecha y hora. Por favor elige otro horario.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    serializer = AppointmentSerializer(data=data,
                                        context={'request': request})
     if serializer.is_valid():
         serializer.save(user=request.user)
@@ -285,7 +318,7 @@ def available_slots(request):
     ]
 
     ocupados = Appointment.objects.filter(
-        veterinarian=vet_id, date=date
+        veterinarian_id=vet_id, date=date
     ).exclude(status='cancelled').values_list('time', flat=True)
 
     ocupados_str = [t.strftime('%H:%M') for t in ocupados]
@@ -383,7 +416,14 @@ def historial_medico(request):
             item['servicio_nombre'] = ''
 
         # Veterinario
-        item['veterinario_nombre'] = ''
+        if cita.veterinarian_id:
+            try:
+                vet = Veterinarian.objects.get(id=cita.veterinarian_id)
+                item['veterinario_nombre'] = vet.name
+            except:
+                item['veterinario_nombre'] = ''
+        else:
+            item['veterinario_nombre'] = ''
 
         # Consulta
         try:
@@ -444,8 +484,20 @@ def cita_detalle_completo(request, pk):
                 pass
 
         # Veterinario
-        data['veterinario_nombre'] = ''
-        data['veterinario_foto'] = None
+        if cita.veterinarian_id:
+            try:
+                vet = Veterinarian.objects.get(id=cita.veterinarian_id)
+                data['veterinario_nombre'] = vet.name
+                data['veterinario_foto'] = (
+                    request.build_absolute_uri(vet.photo.url)
+                    if vet.photo else None
+                )
+            except Exception:
+                data['veterinario_nombre'] = ''
+                data['veterinario_foto'] = None
+        else:
+            data['veterinario_nombre'] = ''
+            data['veterinario_foto'] = None
 
         # Consulta
         try:

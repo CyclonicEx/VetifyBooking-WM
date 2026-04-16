@@ -108,7 +108,7 @@ class Appointment(models.Model):
         blank=True,
         verbose_name="Servicio"
     )
-
+    veterinarian = models.ForeignKey('Veterinarian', on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField()
     time = models.TimeField()
 

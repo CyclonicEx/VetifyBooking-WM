@@ -21,19 +21,24 @@ class RegisterForm(UserCreationForm):
 
 
 from django import forms
-from .models import Appointment, Pet, Service
+from .models import Appointment, Pet, Service, Veterinarian
 
 class AppointmentForm(forms.ModelForm):
-
     service = forms.ModelChoiceField(
         queryset=Service.objects.filter(is_active=True).order_by('name'),
         empty_label="Seleccionar servicio...",
         label="Servicio"
     )
+    veterinarian = forms.ModelChoiceField(
+        queryset=Veterinarian.objects.filter(is_active=True).order_by('name'),
+        empty_label="Sin preferencia",
+        label="Veterinario",
+        required=False
+    )
 
     class Meta:
         model = Appointment
-        fields = ['pet', 'service', 'date', 'time', 'notes']
+        fields = ['pet', 'service', 'veterinarian', 'date', 'time', 'notes']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
             'time': forms.TimeInput(attrs={'type': 'time'}),
