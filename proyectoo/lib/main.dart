@@ -108,9 +108,9 @@ class NotificacionesService {
 
 class ApiService {
   //IPs
-  static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
+  //static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
   //static const String baseUrl = 'http://172.18.7.130:8000/api';  //UTT
-  //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
+  static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
   static const _timeout = Duration(seconds: 10);
@@ -2538,7 +2538,7 @@ Color _colorEstado(String estado) {
     );
   }
 
-  Widget _areaFotoMascotaRegistro() {
+  Widget _areaFotoMascotaRegistro(StateSetter setSheetState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2577,8 +2577,10 @@ Color _colorEstado(String estado) {
                           child: IconButton(
                             icon: const Icon(Icons.close_rounded,
                                 color: Colors.white, size: 22),
-                            onPressed: () =>
-                                setState(() => _mFotoPath = null),
+                            onPressed: () {
+                              setState(() => _mFotoPath = null);
+                              setSheetState(() => _mFotoPath = null);
+                            },
                           ),
                         ),
                       ),
@@ -2598,6 +2600,7 @@ Color _colorEstado(String estado) {
                                       source: ImageSource.gallery);
                                   if (x != null) {
                                     setState(() => _mFotoPath = x.path);
+                                    setSheetState(() => _mFotoPath = x.path);
                                   }
                                 },
                                 icon: const Icon(Icons.photo_library_rounded,
@@ -2611,6 +2614,7 @@ Color _colorEstado(String estado) {
                                       source: ImageSource.camera);
                                   if (x != null) {
                                     setState(() => _mFotoPath = x.path);
+                                    setSheetState(() => _mFotoPath = x.path);
                                   }
                                 },
                                 icon: const Icon(Icons.camera_alt_rounded,
@@ -2658,6 +2662,7 @@ Color _colorEstado(String estado) {
                                   source: ImageSource.gallery);
                               if (x != null) {
                                 setState(() => _mFotoPath = x.path);
+                                setSheetState(() => _mFotoPath = x.path);
                               }
                             },
                             icon: const Icon(Icons.photo_library_rounded),
@@ -2673,6 +2678,7 @@ Color _colorEstado(String estado) {
                                   source: ImageSource.camera);
                               if (x != null) {
                                 setState(() => _mFotoPath = x.path);
+                                setSheetState(() => _mFotoPath = x.path);
                               }
                             },
                             icon: const Icon(Icons.camera_alt_rounded),
@@ -2692,7 +2698,7 @@ Color _colorEstado(String estado) {
     );
   }
 
-  Widget _panelVacunacionRegistro() {
+  Widget _panelVacunacionRegistro(StateSetter setSheetState) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -2782,7 +2788,10 @@ Color _colorEstado(String estado) {
                   style: const TextStyle(fontSize: 12.5),
                 ),
                 selected: sel,
-                onSelected: (_) => setState(() => _mVacEst = val),
+                onSelected: (_) {
+                  setState(() => _mVacEst = val);
+                  setSheetState(() => _mVacEst = val);
+                },
                 selectedColor: tint.withValues(alpha: 0.22),
                 backgroundColor: Colors.white,
                 labelStyle: TextStyle(
@@ -2876,7 +2885,7 @@ Color _colorEstado(String estado) {
       maxChildSize: 0.95,
       minChildSize: 0.5,
       builder: (_, ctrl) => StatefulBuilder( // ← agrega esto
-        builder: (context, setSheetState) => Container(
+        builder: (sheetContext, setSheetState) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -2914,7 +2923,7 @@ Color _colorEstado(String estado) {
                   GestureDetector(
                     onTap: () async {
                       final picked = await showDatePicker(
-                        context: context,
+                        context: sheetContext,
                         initialDate: _mFechaNac ?? DateTime.now().subtract(const Duration(days: 365)),
                         firstDate: DateTime(2000),
                         lastDate: DateTime.now(),
@@ -2964,17 +2973,17 @@ Color _colorEstado(String estado) {
                 const SizedBox(height: 12),
                 _tf(_mCol, 'Color', Icons.palette_outlined),
                 const SizedBox(height: 22),
-                _areaFotoMascotaRegistro(),
+                _areaFotoMascotaRegistro(setSheetState),
                 const SizedBox(height: 22),
-                _panelVacunacionRegistro(),
+                _panelVacunacionRegistro(setSheetState),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity, height: 54,
                   child: FilledButton.icon(
                     onPressed: () async {
-                      if (_mNom.text.isEmpty) { _snack(context, 'El nombre es obligatorio'); return; }
+                      if (_mNom.text.isEmpty) { _snack(sheetContext, 'El nombre es obligatorio'); return; }
                       final peso = double.tryParse(_mPes.text.replaceAll(',', '.'));
-                      if (peso == null || peso <= 0) { _snack(context, 'Peso inválido'); return; }
+                      if (peso == null || peso <= 0) { _snack(sheetContext, 'Peso inválido'); return; }
                       final err = await app.agregarMascota(
                         Mascota(
                           id: 0,
@@ -2989,12 +2998,12 @@ Color _colorEstado(String estado) {
                         ),
                         photoPath: _mFotoPath,
                       );
-                      if (!context.mounted) return;
-                      if (err != null) { _snack(context, err); return; }
+                      if (!sheetContext.mounted) return;
+                      if (err != null) { _snack(sheetContext, err); return; }
                       for (final c in [_mNom, _mRaz, _mPes, _mCol, _mVacNotas]) c.clear();
                       setState(() { _mEsp = 'dog'; _mVacEst = 'updated'; _mFotoPath = null; _mFechaNac = null; });
-                      Navigator.pop(context);
-                      _snack(context, 'Mascota guardada');
+                      _snack(sheetContext, 'Mascota guardada');
+                      Navigator.pop(sheetContext);
                     },
                     icon: const Icon(Icons.save_rounded, size: 22),
                     label: const Text('Guardar mascota',
