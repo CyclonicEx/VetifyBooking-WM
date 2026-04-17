@@ -81,16 +81,20 @@ class NotificacionesService {
       ),
     );
 
-    await _plugin.zonedSchedule(
-      id,
-      titulo,
-      cuerpo,
-      tz.TZDateTime.from(fechaHora, tz.local),
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-    );
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        titulo,
+        cuerpo,
+        tz.TZDateTime.from(fechaHora, tz.local),
+        details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (e) {
+      debugPrint('No se pudo programar notificación: $e');
+    }
   }
 
   static Future<void> cancelar(int id) async {
@@ -893,6 +897,7 @@ class AppProvider with ChangeNotifier {
   List<VisitaMedica> visitas = [];
   List<Veterinario> veterinarios = [];
   List<AppNotificacion> notificaciones = [];
+  final Set<String> _notificacionesYaEnviadas = {};
   List<Servicio> servicios = [];
   List<CitaCompleta> historialMedico = [];
   List<Hospitalizacion> hospitalizaciones = [];
@@ -1122,8 +1127,11 @@ class AppProvider with ChangeNotifier {
           nuevas.add(AppNotificacion(
               id: nId, titulo: titulo, cuerpo: cuerpo!,
               fecha: ahora, tipo: 'cita'));
+        }
 
-          // ← Notificación real del sistema
+        final notifKey = 'inmediata_${cita.id}';
+        if (!_notificacionesYaEnviadas.contains(notifKey)) {
+          _notificacionesYaEnviadas.add(notifKey);
           await NotificacionesService.mostrarNotificacion(
             id: cita.id,
             titulo: titulo,
@@ -1133,7 +1141,9 @@ class AppProvider with ChangeNotifier {
       }
 
       // Programar recordatorio 1 día antes
-      if (dias >= 1) {
+      final key1dia = 'prog1d_${cita.id}';
+      if (dias >= 1 && !_notificacionesYaEnviadas.contains(key1dia)) {
+        _notificacionesYaEnviadas.add(key1dia);
         final unDiaAntes = cita.fecha.subtract(const Duration(days: 1));
         if (unDiaAntes.isAfter(ahora)) {
           await NotificacionesService.programarNotificacion(
@@ -1146,14 +1156,18 @@ class AppProvider with ChangeNotifier {
       }
 
       // Programar recordatorio 2 horas antes
-      final dosHorasAntes = cita.fecha.subtract(const Duration(hours: 2));
-      if (dosHorasAntes.isAfter(ahora)) {
-        await NotificacionesService.programarNotificacion(
-          id: cita.id + 20000,
-          titulo: '⏰ Tu cita es en 2 horas',
-          cuerpo: 'A las ${cita.fecha.hour.toString().padLeft(2,'0')}:${cita.fecha.minute.toString().padLeft(2,'0')}',
-          fechaHora: dosHorasAntes,
-        );
+      final key2h = 'prog2h_${cita.id}';
+      if (!_notificacionesYaEnviadas.contains(key2h)) {
+        _notificacionesYaEnviadas.add(key2h);
+        final dosHorasAntes = cita.fecha.subtract(const Duration(hours: 2));
+        if (dosHorasAntes.isAfter(ahora)) {
+          await NotificacionesService.programarNotificacion(
+            id: cita.id + 20000,
+            titulo: '⏰ Tu cita es en 2 horas',
+            cuerpo: 'A las ${cita.fecha.hour.toString().padLeft(2,'0')}:${cita.fecha.minute.toString().padLeft(2,'0')}',
+            fechaHora: dosHorasAntes,
+          );
+        }
       }
     }
 
