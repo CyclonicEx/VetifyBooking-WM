@@ -112,9 +112,9 @@ class NotificacionesService {
 
 class ApiService {
   //IPs
-  //static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
+  static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
   //static const String baseUrl = 'http://172.18.7.130:8000/api';  //UTT
-  static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
+  //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
   static const _timeout = Duration(seconds: 10);
