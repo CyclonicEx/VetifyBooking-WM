@@ -269,83 +269,90 @@
             grid-template-columns: 1fr;
         }
     }
+
+    .kpi-card {
+        /* agrega al final del bloque existente: */
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- KPI Cards -->
 <div class="kpi-grid">
+    <a href="{% url 'admin_dashboard:appointments' %}" style="text-decoration:none;">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-value">{{ total_appointments }}</div>
+                    <div class="kpi-label">Total de Citas</div>
+                    <div class="kpi-change kpi-change-positive">
+                        ↑ Todas las citas
+                    </div>
+                </div>
 
-    <div class="kpi-card">
-        <div class="kpi-header">
-            <div>
-                <div class="kpi-value">{{ total_appointments }}</div>
-                <div class="kpi-label">Total de Citas</div>
-                <div class="kpi-change kpi-change-positive">
-                    ↑ Todas las citas
+                <div class="kpi-icon kpi-icon-blue">
+                    <i class="bi bi-calendar-check"></i>
                 </div>
             </div>
-
-            <div class="kpi-icon kpi-icon-blue">
-                <i class="bi bi-calendar-check"></i>
-            </div>
         </div>
-    </div>
+    </a>
+    <a href="{% url 'admin_dashboard:users' %}" style="text-decoration:none;">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-value">{{ total_users }}</div>
+                    <div class="kpi-label">Usuarios Registrados</div>
+                    <div class="kpi-change kpi-change-positive">
+                        ↑ Activos
+                    </div>
+                </div>
 
-    <div class="kpi-card">
-        <div class="kpi-header">
-            <div>
-                <div class="kpi-value">{{ total_users }}</div>
-                <div class="kpi-label">Usuarios Registrados</div>
-                <div class="kpi-change kpi-change-positive">
-                    ↑ Activos
+                <div class="kpi-icon kpi-icon-green">
+                    <i class="bi bi-people"></i>
                 </div>
             </div>
-
-            <div class="kpi-icon kpi-icon-green">
-                <i class="bi bi-people"></i>
-            </div>
         </div>
-    </div>
+    </a>
+    <a href="{% url 'admin_dashboard:pets' %}" style="text-decoration:none;">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-value">{{ total_pets }}</div>
+                    <div class="kpi-label">Mascotas Registradas</div>
+                    <div class="kpi-change kpi-change-positive">
+                        ↑ En sistema
+                    </div>
+                </div>
 
-    <div class="kpi-card">
-        <div class="kpi-header">
-            <div>
-                <div class="kpi-value">{{ total_pets }}</div>
-                <div class="kpi-label">Mascotas Registradas</div>
-                <div class="kpi-change kpi-change-positive">
-                    ↑ En sistema
+                <div class="kpi-icon kpi-icon-purple">
+                    <i class="bi bi-heart"></i>
                 </div>
             </div>
-
-            <div class="kpi-icon kpi-icon-purple">
-                <i class="bi bi-heart"></i>
-            </div>
         </div>
-    </div>
+    </a>
+    <a href="{% url 'admin_dashboard:appointments' %}?status=today" style="text-decoration:none;">
+        <div class="kpi-card">
+            <div class="kpi-header">
+                <div>
+                    <div class="kpi-value">{{ today_appointments }}</div>
+                    <div class="kpi-label">Citas Hoy</div>
+                    <div class="kpi-change kpi-change-positive">
+                        ↑ {{ pending_appointments }} pendientes
+                    </div>
+                </div>
 
-    <div class="kpi-card">
-        <div class="kpi-header">
-            <div>
-                <div class="kpi-value">{{ today_appointments }}</div>
-                <div class="kpi-label">Citas Hoy</div>
-                <div class="kpi-change kpi-change-positive">
-                    ↑ {{ pending_appointments }} pendientes
+                <div class="kpi-icon kpi-icon-orange">
+                    <i class="bi bi-clipboard-data"></i>
                 </div>
             </div>
-
-            <div class="kpi-icon kpi-icon-orange">
-                <i class="bi bi-clipboard-data"></i>
-            </div>
         </div>
-    </div>
-
+    </a>
 </div>
 
 <!-- Charts -->
 <div class="chart-grid">
 
-    <!-- Line Chart -->
     <div class="chart-card">
         <div class="chart-header">
             <h3 class="chart-title">
@@ -355,7 +362,6 @@
         </div>
 
         <div class="chart-canvas" id="appointmentsChart">
-            <!-- Chart will be rendered here -->
         </div>
     </div>
 

@@ -302,13 +302,15 @@ def horarios_lista(request):
 
 # ── AVAILABLE SLOTS ──────────────────────────────────────────────
 
+from datetime import date, datetime, time
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def available_slots(request):
     vet_id = request.query_params.get('vet_id')
-    date = request.query_params.get('date')
+    date_str = request.query_params.get('date')
 
-    if not vet_id or not date:
+    if not vet_id or not date_str:
         return Response({'error': 'vet_id y date son requeridos'},
                         status=status.HTTP_400_BAD_REQUEST)
 
@@ -318,14 +320,24 @@ def available_slots(request):
     ]
 
     ocupados = Appointment.objects.filter(
-        veterinarian_id=vet_id, date=date
+        veterinarian_id=vet_id, date=date_str
     ).exclude(status='cancelled').values_list('time', flat=True)
-
     ocupados_str = [t.strftime('%H:%M') for t in ocupados]
-    disponibles = [s for s in all_slots if s not in ocupados_str]
+
+    # Filtrar horas pasadas si la fecha es hoy
+    hoy = date.today()
+    fecha_solicitada = date.fromisoformat(date_str)
+    if fecha_solicitada == hoy:
+        ahora = datetime.now().time()
+        disponibles = [
+            s for s in all_slots
+            if s not in ocupados_str
+            and time(int(s[:2]), int(s[3:])) > ahora
+        ]
+    else:
+        disponibles = [s for s in all_slots if s not in ocupados_str]
 
     return Response({'available_slots': disponibles})
-
 
 # ── VACUNAS ───────────────────────────────────────────────────────
 

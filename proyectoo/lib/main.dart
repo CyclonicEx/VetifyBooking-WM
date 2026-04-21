@@ -112,9 +112,9 @@ class NotificacionesService {
 
 class ApiService {
   //IPs
-  static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
+  //static const String baseUrl = 'http://172.20.10.13:8000/api'; //telefono
   //static const String baseUrl = 'http://172.18.7.130:8000/api';  //UTT
-  //static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
+  static const String baseUrl = 'http://192.168.1.118:8000/api'; //Casa
   static String? _token;
   static int? _userId;
   static const _timeout = Duration(seconds: 10);
@@ -1395,7 +1395,7 @@ class _SplashScreenState extends State<SplashScreen> {
         email: '',
       );
       
-      // Timeout de seguridad — si cargarTodo tarda más de 15s igual navega
+      // Timeout de seguridad, si cargarTodo tarda más de 15s igual navega
       await app.cargarTodo().timeout(
         const Duration(seconds: 15),
         onTimeout: () => debugPrint('cargarTodo splash timeout'),
@@ -4976,6 +4976,24 @@ class _ReservarCitaScreenState extends State<ReservarCitaScreen> {
     '15:00','15:30','16:00','16:30',
   ];
 
+  List<String> get _slotsVisibles {
+    final slots = _slots.isNotEmpty ? _slots : _horariosDefault;
+    final ahora = DateTime.now();
+    final esHoy = _fecha.year == ahora.year &&
+                  _fecha.month == ahora.month &&
+                  _fecha.day == ahora.day;
+
+    if (!esHoy) return slots;
+
+    return slots.where((hora) {
+      final partes = hora.split(':');
+      final hh = int.tryParse(partes[0]) ?? 0;
+      final mm = int.tryParse(partes[1]) ?? 0;
+      final slotTime = DateTime(_fecha.year, _fecha.month, _fecha.day, hh, mm);
+      return slotTime.isAfter(ahora);
+    }).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -5140,13 +5158,13 @@ class _ReservarCitaScreenState extends State<ReservarCitaScreen> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: (_slots.isNotEmpty ? _slots : _horariosDefault).length,
+            itemCount: _slotsVisibles.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4, crossAxisSpacing: 8,
               mainAxisSpacing: 8, childAspectRatio: 2.2,
             ),
             itemBuilder: (_, i) {
-              final hora = (_slots.isNotEmpty ? _slots : _horariosDefault)[i];
+              final hora = _slotsVisibles[i];
               final sel = hora == _hora;
               return GestureDetector(
                 onTap: () => setState(() => _hora = hora),

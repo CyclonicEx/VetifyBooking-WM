@@ -158,13 +158,30 @@ def change_appointment_status(request, appointment_id):
 @admin_required
 def create_appointment_admin(request):
     if request.method == 'POST':
+        from datetime import date, datetime, time
+
+        fecha_str = request.POST.get('date')
+        hora_str = request.POST.get('time')
+
+        # Validar hora pasada si es hoy
+        if fecha_str and hora_str:
+            from datetime import date as date_type
+            fecha = date_type.fromisoformat(fecha_str)
+            if fecha == date_type.today():
+                ahora = datetime.now().time()
+                hh, mm = int(hora_str[:2]), int(hora_str[3:5])
+                slot_time = time(hh, mm)
+                if slot_time <= ahora:
+                    messages.error(request, 'No puedes agendar una cita en una hora que ya pasó hoy.')
+                    return redirect('admin_dashboard:appointments')
+
         Appointment.objects.create(
             user_id=request.POST.get('user'),
             pet_id=request.POST.get('pet'),
             service_id=request.POST.get('service'),
             veterinarian_id=request.POST.get('veterinarian') or None,
-            date=request.POST.get('date'),
-            time=request.POST.get('time'),
+            date=fecha_str,
+            time=hora_str,
             notes=request.POST.get('notes', ''),
             status='confirmed'
         )
@@ -358,6 +375,12 @@ def reports_view(request):
     ).count()
     
     # Citas por mes (últimos 6 meses)
+    MESES_ES = {
+        'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo',
+        'April': 'Abril', 'May': 'Mayo', 'June': 'Junio',
+        'July': 'Julio', 'August': 'Agosto', 'September': 'Septiembre',
+        'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+    }
     appointments_by_month = []
     for i in range(5, -1, -1):
         month_date = end_date - timedelta(days=30*i)
@@ -366,14 +389,16 @@ def reports_view(request):
             month_end = month_date.replace(year=month_date.year + 1, month=1, day=1)
         else:
             month_end = month_date.replace(month=month_date.month + 1, day=1)
-        
+
         count = Appointment.objects.filter(
             date__gte=month_start,
             date__lt=month_end
         ).count()
-        
+
+        nombre_mes = MESES_ES.get(month_date.strftime('%B'), month_date.strftime('%B'))
+
         appointments_by_month.append({
-            'month': month_date.strftime('%B'),
+            'month': nombre_mes,
             'count': count
         })
     

@@ -90,6 +90,18 @@ def booking_view(request):
         form = AppointmentForm(request.POST, user=request.user)
         if form.is_valid():
             appointment = form.save(commit=False)
+            # Validar hora pasada si es hoy
+            from datetime import date as date_type, datetime, time as time_type
+            if appointment.date == date_type.today():
+                ahora = datetime.now().time()
+                if appointment.time <= ahora:
+                    messages.error(request, 'No puedes agendar una cita en una hora que ya pasó.')
+                    return render(request, 'booking/booking.html', {
+                        'form': form,
+                        'preselected_vet_id': preselected_vet_id,
+                        'preselected_vet': preselected_vet,
+                        'preselected_service_id': preselected_service_id,
+                    })
             appointment.user = request.user
             appointment.save()
 
