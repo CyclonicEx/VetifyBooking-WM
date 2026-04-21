@@ -105,13 +105,37 @@
 
 <!-- Mensajes del sistema -->
 {% if messages %}
-<div class="messages-container">
+<div style="position:fixed; top:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.75rem; max-width:360px;">
     {% for message in messages %}
-    <div class="message message-{{ message.tags }}">
+    <div style="
+        background:{% if message.tags == 'error' %}#fee2e2{% elif message.tags == 'success' %}#d1fae5{% else %}#dbeafe{% endif %};
+        color:{% if message.tags == 'error' %}#991b1b{% elif message.tags == 'success' %}#065f46{% else %}#1e40af{% endif %};
+        border-left:4px solid {% if message.tags == 'error' %}#ef4444{% elif message.tags == 'success' %}#10b981{% else %}#3b82f6{% endif %};
+        padding:0.875rem 1rem;
+        border-radius:0.75rem;
+        font-size:0.875rem;
+        font-weight:600;
+        box-shadow:0 4px 12px rgba(0,0,0,0.15);
+        display:flex;
+        align-items:center;
+        gap:0.5rem;
+        animation: slideIn 0.3s ease-out;
+    " id="toast-{{ forloop.counter }}">
+        <i class="bi bi-{% if message.tags == 'error' %}exclamation-circle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
         {{ message }}
+        <button onclick="this.parentElement.remove()" style="margin-left:auto; background:none; border:none; cursor:pointer; font-size:1rem; opacity:0.6;">✕</button>
     </div>
     {% endfor %}
 </div>
+<style>
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}
+</style>
+<script>
+document.querySelectorAll('[id^="toast-"]').forEach(t => setTimeout(() => t.remove(), 5000));
+</script>
 {% endif %}
 
 <!-- Contenido principal -->

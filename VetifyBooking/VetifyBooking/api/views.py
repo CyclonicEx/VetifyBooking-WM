@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 import json
@@ -305,6 +305,7 @@ def horarios_lista(request):
 from datetime import date, datetime, time
 
 @api_view(['GET'])
+@authentication_classes([TokenAuthentication, SessionAuthentication])
 @permission_classes([IsAuthenticated])
 def available_slots(request):
     vet_id = request.query_params.get('vet_id')

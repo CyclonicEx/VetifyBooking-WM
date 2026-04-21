@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    VETIFY ADMIN DASHBOARD - MAIN STYLES
    Layout con Header Horizontal
    ============================================ */
@@ -102,7 +102,7 @@ body {
 }
 
 .nav-link:hover {
-    color: #0284c7;
+    color: #38bdf8;
     background: #e0f2fe;
     transform: translateY(-1px);
 }
@@ -169,7 +169,7 @@ main {
 .message-info {
     background: #dbeafe;
     color: #1e40af;
-    border-left: 4px solid #3b82f6;
+    border-left: 4px solid #38bdf8;
 }
 
 .message-warning {
@@ -202,7 +202,7 @@ main {
 }
 
 .btn-primary:hover {
-    background: #0284c7;
+    background: #38bdf8;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
 }

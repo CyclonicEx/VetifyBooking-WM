@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    VETIFY ADMIN DASHBOARD - SIDEBAR LAYOUT
    ============================================ */
 
@@ -110,9 +110,9 @@ body {
 }
 
 .sidebar-link.active {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #38bdf8 0%, #38bdf8 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(2,132,199,0.3);
+    box-shadow: 0 4px 12px rgba(56,189,248,0.3);
 }
 
 .sidebar-link-icon {
@@ -203,7 +203,7 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #38bdf8 0%, #38bdf8 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -309,14 +309,14 @@ main {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    background: linear-gradient(135deg, #38bdf8 0%, #38bdf8 100%);
     color: white;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+    background: linear-gradient(135deg, #38bdf8 0%, #38bdf8 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
 }
 
 .btn-secondary {
@@ -513,7 +513,7 @@ main {
 
 .badge-primary {
     background: #bae6fd;
-    color: #075985;
+    color: #38bdf8;
 }
 
 /* ============================================
@@ -547,8 +547,8 @@ main {
 .form-select:focus,
 .form-textarea:focus {
     outline: none;
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3px rgba(2,132,199,0.1);
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.1);
 }
 
 .form-textarea {

@@ -1,4 +1,4 @@
-{% extends "booking/base.html" %}
+﻿{% extends "booking/base.html" %}
 {% load static %}
 
 {% block title %}Reservar Cita - Vetify{% endblock %}
@@ -27,7 +27,7 @@
         <div style="background:white; border-radius:1.25rem; padding:2.5rem; box-shadow:0 4px 16px rgba(0,0,0,0.08);">
 
             <h2 style="font-size:1.5rem; font-weight:800; color:#0f172a; margin-bottom:0.5rem;">
-                <i class="bi bi-calendar-check" style="color:#0284c7;"></i> Datos de la Cita
+                <i class="bi bi-calendar-check" style="color:#38bdf8;"></i> Datos de la Cita
             </h2>
             <p style="color:#6b7280; font-size:0.9rem; margin-bottom:2rem;">
                 Completa el formulario para agendar tu cita
@@ -39,11 +39,11 @@
                 <!-- Mascota -->
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
-                        <i class="bi bi-heart-pulse" style="color:#0284c7;"></i> Mascota *
+                        <i class="bi bi-heart-pulse" style="color:#38bdf8;"></i> Mascota *
                     </label>
                     <select name="pet" required
                             style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; transition:all 0.3s; background:white;"
-                            onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
+                            onfocus="this.style.borderColor='#38bdf8'" onblur="this.style.borderColor='#e5e7eb'">
                         <option value="">Seleccionar mascota...</option>
                         {% for pet in form.pet.field.queryset %}
                         <option value="{{ pet.id }}" {% if form.pet.value == pet.id|stringformat:"s" %}selected{% endif %}>
@@ -86,8 +86,8 @@
                         <div id="vetPhoto" style="width:50px; height:50px; border-radius:50%; overflow:hidden;"></div>
 
                         <div>
-                            <div id="vetName" style="font-weight:700; color:#0369a1;"></div>
-                            <div id="vetSpecialty" style="font-size:0.8rem; color:#0284c7;"></div>
+                            <div id="vetName" style="font-weight:700; color:#38bdf8;"></div>
+                            <div id="vetSpecialty" style="font-size:0.8rem; color:#38bdf8;"></div>
                         </div>
                     </div>
 
@@ -102,18 +102,18 @@
                 <!-- Fecha y hora -->
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
-                        <i class="bi bi-calendar" style="color:#0284c7;"></i> Fecha *
+                        <i class="bi bi-calendar" style="color:#38bdf8;"></i> Fecha *
                     </label>
                     <input type="date" name="date" required
                         value="{{ form.date.value|default:'' }}"
                         style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; transition:all 0.3s;"
-                        onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">
+                        onfocus="this.style.borderColor='#38bdf8'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
 
                 <!-- Hora con selector de botones -->
                 <div style="margin-bottom:1.5rem;">
                     <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.75rem; font-size:0.875rem;">
-                        <i class="bi bi-clock" style="color:#0284c7;"></i> Hora *
+                        <i class="bi bi-clock" style="color:#38bdf8;"></i> Hora *
                     </label>
                     <div id="horasGrid" style="display:grid; grid-template-columns:repeat(5, 1fr); gap:0.5rem;"></div>
                     <input type="hidden" name="time" id="timeHidden" required value="{{ form.time.value|default:'' }}">
@@ -125,23 +125,15 @@
                 <!-- Notas -->
                 <div style="margin-bottom:2rem;">
                     <label style="display:block; font-weight:600; color:#374151; margin-bottom:0.5rem; font-size:0.875rem;">
-                        <i class="bi bi-chat-text" style="color:#0284c7;"></i> Notas adicionales
+                        <i class="bi bi-chat-text" style="color:#38bdf8;"></i> Notas adicionales
                     </label>
                     <textarea name="notes" rows="3" placeholder="Indica síntomas, razón de la visita u observaciones especiales..."
                               style="width:100%; padding:0.875rem; border:2px solid #e5e7eb; border-radius:0.75rem; font-size:0.95rem; resize:vertical; transition:all 0.3s;"
-                              onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#e5e7eb'">{{ form.notes.value|default:'' }}</textarea>
+                              onfocus="this.style.borderColor='#38bdf8'" onblur="this.style.borderColor='#e5e7eb'">{{ form.notes.value|default:'' }}</textarea>
                 </div>
-
-                {% if form.errors %}
-                <div style="background:#fee2e2; color:#991b1b; padding:1rem; border-radius:0.75rem; margin-bottom:1.5rem; font-size:0.875rem; border-left:4px solid #ef4444;">
-                    {% for field, errors in form.errors.items %}
-                        {% for error in errors %}<p>{{ error }}</p>{% endfor %}
-                    {% endfor %}
-                </div>
-                {% endif %}
 
                 <button type="submit"
-                        style="width:100%; padding:1rem; background:linear-gradient(135deg,#0284c7,#0369a1); color:white; border:none; border-radius:0.75rem; font-weight:700; font-size:1.0625rem; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; justify-content:center; gap:0.75rem;"
+                        style="width:100%; padding:1rem; background:linear-gradient(135deg,#38bdf8,#38bdf8); color:white; border:none; border-radius:0.75rem; font-weight:700; font-size:1.0625rem; cursor:pointer; transition:all 0.3s; display:flex; align-items:center; justify-content:center; gap:0.75rem;"
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 20px rgba(2,132,199,0.4)'"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                     <i class="bi bi-check-circle"></i>
@@ -162,7 +154,7 @@
             <!-- Info card -->
             <div style="background:white; border-radius:1.25rem; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
                 <h3 style="font-weight:700; color:#0f172a; margin-bottom:1rem; font-size:1rem;">
-                    <i class="bi bi-info-circle" style="color:#0284c7;"></i> ¿Qué necesitas traer?
+                    <i class="bi bi-info-circle" style="color:#38bdf8;"></i> ¿Qué necesitas traer?
                 </h3>
                 <div style="display:flex; flex-direction:column; gap:0.75rem; font-size:0.875rem; color:#4b5563;">
                     <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -186,10 +178,10 @@
 
             <!-- Horarios card -->
             <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe); border:1px solid #bae6fd; border-radius:1.25rem; padding:1.5rem;">
-                <h3 style="font-weight:700; color:#0284c7; margin-bottom:1rem; font-size:1rem;">
+                <h3 style="font-weight:700; color:#38bdf8; margin-bottom:1rem; font-size:1rem;">
                     <i class="bi bi-clock"></i> Horario de Atención
                 </h3>
-                <div style="font-size:0.875rem; color:#0369a1; display:flex; flex-direction:column; gap:0.5rem;">
+                <div style="font-size:0.875rem; color:#38bdf8; display:flex; flex-direction:column; gap:0.5rem;">
                     <div style="display:flex; justify-content:space-between;">
                         <span>Lunes - Viernes</span>
                         <strong>9:00 - 17:00</strong>
@@ -209,10 +201,74 @@
     </div>
 </div>
 <script>
-    let vetsData = [];
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+let vetsData = [];
+const HORAS_DEFAULT = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30',
+    '15:00', '15:30', '16:00', '16:30', '17:00',
+];
+
+function renderHoras(horas, horaActual) {
+    const grid = document.getElementById('horasGrid');
+    grid.innerHTML = '';
+
+    if (!horas || horas.length === 0) {
+        grid.innerHTML = '<p style="color:#6b7280; font-size:0.875rem; grid-column:1/-1;">No hay horarios disponibles para esta fecha y veterinario.</p>';
+        return;
+    }
+
+    horas.forEach(hora => {
+        const sel = hora === horaActual;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = hora;
+        btn.style.cssText = `
+            padding: 0.6rem 0.5rem;
+            border-radius: 0.5rem;
+            border: 2px solid ${sel ? '#38bdf8' : '#e5e7eb'};
+            background: ${sel ? '#38bdf8' : 'white'};
+            color: ${sel ? 'white' : '#374151'};
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        btn.onmouseover = () => { if (!sel) { btn.style.borderColor='#38bdf8'; btn.style.color='#38bdf8'; } };
+        btn.onmouseout  = () => { if (document.getElementById('timeHidden').value !== hora) { btn.style.borderColor='#e5e7eb'; btn.style.color='#374151'; } };
+        btn.onclick = () => {
+            document.getElementById('timeHidden').value = hora;
+            document.getElementById('horaTexto').textContent = hora;
+            document.getElementById('horaSeleccionada').style.display = 'block';
+            renderHoras(horas, hora);
+        };
+        grid.appendChild(btn);
+    });
+}
+
+function cargarSlots() {
+    const vetId = document.getElementById('vetSelect')?.value;
+    const fecha = document.querySelector('input[name="date"]').value;
+    const actual = document.getElementById('timeHidden').value;
+
+    if (vetId && fecha) {
+        fetch(`/api/available_slots/?vet_id=${vetId}&date=${fecha}`, {
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+            .then(r => r.json())
+            .then(data => renderHoras(data.available_slots || HORAS_DEFAULT, actual))
+            .catch(() => renderHoras(HORAS_DEFAULT, actual));
+    } else {
+        renderHoras(HORAS_DEFAULT, actual);
+    }
+}
+
+document.querySelector('input[name="date"]').addEventListener('change', () => {
+    document.getElementById('timeHidden').value = '';
+    cargarSlots();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
     const serviceSelect = document.getElementById('serviceSelect');
     const vetContainer = document.getElementById('vetContainer');
     const vetSelect = document.getElementById('vetSelect');
@@ -227,39 +283,34 @@ document.addEventListener('DOMContentLoaded', function () {
                 vetSelect.innerHTML = '<option value="">Sin preferencia</option>';
 
                 data.vets.forEach(vet => {
-
                     const isSelected = (preselectedVet && preselectedVet == vet.id);
-
                     vetSelect.innerHTML += `
                         <option value="${vet.id}" ${isSelected ? 'selected' : ''}>
                             Dr(a). ${vet.name} — ${vet.specialty}
                         </option>`;
-
                     if (isSelected) {
                         mostrarVetCard(vet);
                     }
                 });
 
                 preselectedVet = null;
-
                 vetContainer.style.display = 'block';
+                cargarSlots();
             });
     }
-    vetSelect.addEventListener('change', function () {
 
+    vetSelect.addEventListener('change', function () {
         if (!this.value) {
             document.getElementById('selectedVetCard').style.display = 'none';
-            return;
+        } else {
+            const vet = vetsData.find(v => String(v.id) === String(this.value));
+            if (vet) mostrarVetCard(vet);
         }
-
-        const vet = vetsData.find(v => String(v.id) === String(this.value));
-
-        if (vet) {
-            mostrarVetCard(vet);
-        }
+        document.getElementById('timeHidden').value = '';
+        cargarSlots();
     });
 
-    serviceSelect.addEventListener('change', function() {
+    serviceSelect.addEventListener('change', function () {
         if (this.value) {
             preselectedVet = null;
             cargarVeterinarios(this.value);
@@ -296,64 +347,11 @@ document.addEventListener('DOMContentLoaded', function () {
         card.style.display = 'flex';
         card.style.transition = 'all 0.3s ease';
         card.style.transform = 'scale(0.95)';
-
-        setTimeout(() => {
-            card.style.transform = 'scale(1)';
-        }, 50);
+        setTimeout(() => { card.style.transform = 'scale(1)'; }, 50);
     }
 
-
+    cargarSlots();
 });
-// Horarios disponibles
-const horasDisponibles = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '12:00', '12:30', '13:00', '13:30',
-    '15:00', '15:30', '16:00', '16:30', '17:00',
-];
-
-function renderHoras(horaActual) {
-    const grid = document.getElementById('horasGrid');
-    grid.innerHTML = '';
-    horasDisponibles.forEach(hora => {
-        const sel = hora === horaActual;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.textContent = hora;
-        btn.style.cssText = `
-            padding: 0.6rem 0.5rem;
-            border-radius: 0.5rem;
-            border: 2px solid ${sel ? '#0284c7' : '#e5e7eb'};
-            background: ${sel ? '#0284c7' : 'white'};
-            color: ${sel ? 'white' : '#374151'};
-            font-weight: 600;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        `;
-        btn.onmouseover = () => {
-            if (!sel) {
-                btn.style.borderColor = '#0284c7';
-                btn.style.color = '#0284c7';
-            }
-        };
-        btn.onmouseout = () => {
-            if (document.getElementById('timeHidden').value !== hora) {
-                btn.style.borderColor = '#e5e7eb';
-                btn.style.color = '#374151';
-            }
-        };
-        btn.onclick = () => {
-            document.getElementById('timeHidden').value = hora;
-            document.getElementById('horaTexto').textContent = hora;
-            document.getElementById('horaSeleccionada').style.display = 'block';
-            renderHoras(hora);
-        };
-        grid.appendChild(btn);
-    });
-}
-
-// Inicializar con valor existente si lo hay
-renderHoras(document.getElementById('timeHidden').value || '');
 </script>
 {% endblock %}
 

@@ -90,26 +90,45 @@ def booking_view(request):
         form = AppointmentForm(request.POST, user=request.user)
         if form.is_valid():
             appointment = form.save(commit=False)
-            # Validar hora pasada si es hoy
-            from datetime import date as date_type, datetime, time as time_type
+
+            from datetime import date as date_type, datetime
+
+            if not appointment.time:
+                messages.error(request, 'Debes seleccionar una hora.')
+                return redirect('booking')
+
+            if appointment.date < date_type.today():
+                messages.error(request, 'No puedes reservar una cita en una fecha pasada.')
+                return redirect('booking')
+
             if appointment.date == date_type.today():
-                ahora = datetime.now().time()
-                if appointment.time <= ahora:
-                    messages.error(request, 'No puedes agendar una cita en una hora que ya pasó.')
-                    return render(request, 'booking/booking.html', {
-                        'form': form,
-                        'preselected_vet_id': preselected_vet_id,
-                        'preselected_vet': preselected_vet,
-                        'preselected_service_id': preselected_service_id,
-                    })
+                if appointment.time <= datetime.now().time():
+                    messages.error(request, 'No puedes agendar en una hora que ya pasó hoy.')
+                    return redirect('booking')
+
+            if Appointment.objects.filter(
+                pet=appointment.pet,
+                date=appointment.date,
+                time=appointment.time,
+            ).exclude(status='cancelled').exists():
+                messages.error(request, 'Esa mascota ya tiene una cita en esa fecha y hora.')
+                return redirect('booking')
+
+            if appointment.veterinarian and Appointment.objects.filter(
+                veterinarian=appointment.veterinarian,
+                date=appointment.date,
+                time=appointment.time,
+            ).exclude(status='cancelled').exists():
+                messages.error(request, 'El veterinario seleccionado ya tiene una cita en ese horario.')
+                return redirect('booking')
+
             appointment.user = request.user
             appointment.save()
-
-            messages.success(
-                request,
-                f'¡Cita agendada para {appointment.pet.name}!'
-            )
+            messages.success(request, f'¡Cita agendada para {appointment.pet.name}!')
             return redirect('appointments')
+        else:
+            messages.error(request, 'Por favor corrige los errores del formulario.')
+            return redirect('booking')
     else:
         form = AppointmentForm(user=request.user)
 

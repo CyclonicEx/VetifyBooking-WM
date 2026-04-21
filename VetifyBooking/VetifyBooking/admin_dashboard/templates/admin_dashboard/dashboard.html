@@ -1,4 +1,4 @@
-{% extends 'admin_dashboard/base.html' %}
+﻿{% extends 'admin_dashboard/base.html' %}
 
 {% block title %}Dashboard - Vetify Admin{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -112,7 +112,7 @@
 
     .chart-bar {
         flex: 1;
-        background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+        background: linear-gradient(180deg, #38bdf8 0%, #38bdf8 100%);
         border-radius: 0.5rem 0.5rem 0 0;
         min-height: 20px;
         position: relative;
@@ -120,7 +120,7 @@
     }
 
     .chart-bar:hover {
-        background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+        background: linear-gradient(180deg, #38bdf8 0%, #38bdf8 100%);
     }
 
     .chart-bar-label {
@@ -155,7 +155,7 @@
         height: 200px;
         border-radius: 50%;
         background: conic-gradient(
-            #3b82f6 0deg 120deg,
+            #38bdf8 0deg 120deg,
             #ec4899 120deg 240deg,
             #8b5cf6 240deg 360deg
         );
@@ -223,7 +223,7 @@
     }
 
     .view-all {
-        color: #0284c7;
+        color: #38bdf8;
         font-size: 0.875rem;
         text-decoration: none;
         font-weight: 600;
@@ -388,7 +388,7 @@
                         <div
                             class="legend-color"
                             style="background:
-                            {% if pet_type.pet_type == 'dog' %}#3b82f6
+                            {% if pet_type.pet_type == 'dog' %}#38bdf8
                             {% elif pet_type.pet_type == 'cat' %}#ec4899
                             {% else %}#8b5cf6{% endif %}">
                         </div>
@@ -566,7 +566,7 @@ const petsData = [
     {% endfor %}
 ];
 
-const colors = { dog: '#3b82f6', cat: '#ec4899', other: '#8b5cf6' };
+const colors = { dog: '#38bdf8', cat: '#ec4899', other: '#8b5cf6' };
 const total = petsData.reduce((sum, p) => sum + p.count, 0);
 
 if (total > 0) {

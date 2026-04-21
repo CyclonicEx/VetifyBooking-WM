@@ -154,32 +154,55 @@ def change_appointment_status(request, appointment_id):
             messages.success(request, f'Estado actualizado a {appointment.get_status_display()}')
     return redirect('admin_dashboard:appointments')
 
-
 @admin_required
 def create_appointment_admin(request):
     if request.method == 'POST':
-        from datetime import date, datetime, time
+        from datetime import date as date_type, datetime, time as time_type
 
-        fecha_str = request.POST.get('date')
-        hora_str = request.POST.get('time')
+        fecha_str = request.POST.get('date', '').strip()
+        hora_str  = request.POST.get('time', '').strip()
+
+        # Validar que se haya seleccionado hora y fecha
+        if not fecha_str or not hora_str:
+            messages.error(request, 'Debes seleccionar una fecha y una hora.')
+            return redirect('admin_dashboard:appointments')
+
+        fecha = date_type.fromisoformat(fecha_str)
+
+        # Validar fecha pasada
+        if fecha < date_type.today():
+            messages.error(request, 'No puedes crear una cita en una fecha pasada.')
+            return redirect('admin_dashboard:appointments')
 
         # Validar hora pasada si es hoy
-        if fecha_str and hora_str:
-            from datetime import date as date_type
-            fecha = date_type.fromisoformat(fecha_str)
-            if fecha == date_type.today():
-                ahora = datetime.now().time()
-                hh, mm = int(hora_str[:2]), int(hora_str[3:5])
-                slot_time = time(hh, mm)
-                if slot_time <= ahora:
-                    messages.error(request, 'No puedes agendar una cita en una hora que ya pasó hoy.')
-                    return redirect('admin_dashboard:appointments')
+        if fecha == date_type.today():
+            ahora = datetime.now().time()
+            hh, mm = int(hora_str[:2]), int(hora_str[3:5])
+            if time_type(hh, mm) <= ahora:
+                messages.error(request, 'No puedes agendar en una hora que ya pasó hoy.')
+                return redirect('admin_dashboard:appointments')
+
+        # Validar conflicto de fecha+hora para el mismo usuario/mascota
+        pet_id = request.POST.get('pet')
+        if Appointment.objects.filter(
+            pet_id=pet_id, date=fecha_str, time=hora_str
+        ).exclude(status='cancelled').exists():
+            messages.error(request, 'Esa mascota ya tiene una cita en esa fecha y hora.')
+            return redirect('admin_dashboard:appointments')
+
+        # Validar conflicto de veterinario
+        vet_id = request.POST.get('veterinarian') or None
+        if vet_id and Appointment.objects.filter(
+            veterinarian_id=vet_id, date=fecha_str, time=hora_str
+        ).exclude(status='cancelled').exists():
+            messages.error(request, 'El veterinario ya tiene una cita en ese horario.')
+            return redirect('admin_dashboard:appointments')
 
         Appointment.objects.create(
             user_id=request.POST.get('user'),
-            pet_id=request.POST.get('pet'),
+            pet_id=pet_id,
             service_id=request.POST.get('service'),
-            veterinarian_id=request.POST.get('veterinarian') or None,
+            veterinarian_id=vet_id,
             date=fecha_str,
             time=hora_str,
             notes=request.POST.get('notes', ''),
@@ -1113,18 +1136,29 @@ def hospitalizations_view(request):
 @admin_required
 def create_hospitalization_view(request):
     if request.method == 'POST':
+        from datetime import date as date_type
+        admission_str = request.POST.get('admission_date', '').strip()
+        if admission_str:
+            try:
+                admission_date = date_type.fromisoformat(admission_str)
+                if admission_date < date_type.today():
+                    messages.error(request, 'La fecha de ingreso no puede ser en el pasado.')
+                    return redirect('admin_dashboard:hospitalizations')
+            except ValueError:
+                messages.error(request, 'Formato de fecha de ingreso inválido.')
+                return redirect('admin_dashboard:hospitalizations')
+
         hosp = Hospitalization.objects.create(
             pet_id=request.POST.get('pet'),
             veterinarian_id=request.POST.get('veterinarian') or None,
             reason=request.POST.get('reason'),
             initial_diagnosis=request.POST.get('initial_diagnosis'),
-            admission_date=request.POST.get('admission_date'),
+            admission_date=admission_str,
             patient_status=request.POST.get('patient_status', 'stable'),
             notes=request.POST.get('notes', ''),
         )
-        # Crear orden médica vacía
         HospitalizationOrder.objects.create(hospitalization=hosp)
-        messages.success(request, f'Hospitalización de {hosp.pet.name} creada.')
+        messages.success(request, f'Hospitalización de {hosp.pet.name} creada exitosamente.')
         return redirect('admin_dashboard:hospitalization_detail', pk=hosp.pk)
     return redirect('admin_dashboard:hospitalizations')
 
